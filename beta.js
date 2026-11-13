@@ -53,7 +53,7 @@
       '.beta-tag{position:fixed;z-index:60;top:calc(env(safe-area-inset-top,0px) + 6px);left:50%;transform:translateX(-50%);background:#FF8A3D;color:#1A0E00;border:0;border-radius:999px;font:800 13px/1 system-ui,sans-serif;letter-spacing:.14em;padding:8px 14px;min-height:32px;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer}' +
       '.beta-ov{position:fixed;inset:0;z-index:61;background:rgba(5,10,18,.72);display:grid;place-items:center;padding:20px}' +
       '.beta-pn{background:#101A2C;color:#ECF1F8;border:2px solid #FF8A3D;border-radius:18px;padding:22px;width:min(420px,100%);display:flex;flex-direction:column;gap:12px;font:15px/1.4 system-ui,sans-serif}' +
-      '.beta-pn h2{margin:0;font-size:20px}.beta-pn p{margin:0;color:#B5C2D6}' +
+      '.beta-pn h2{margin:0;font-size:20px}.beta-pn p{margin:0;color:#B5C2D6}.beta-pn p b{color:#ECF1F8}#beta-msg{color:#FF8A3D}#beta-msg:empty{display:none}' +
       '.beta-pn button{min-height:48px;border-radius:12px;border:0;font:700 15px system-ui,sans-serif;cursor:pointer}' +
       '.beta-pn .b1{background:#FF8A3D;color:#1A0E00}.beta-pn .b2{background:transparent;color:#ECF1F8;box-shadow:inset 0 0 0 1.5px #25334E}' +
       '.brand b .beta-v{color:#FF8A3D;margin-left:.35em}';
@@ -68,6 +68,8 @@
       ov.innerHTML = '<div class="beta-pn" role="dialog" aria-modal="true" aria-labelledby="beta-h"><h2 id="beta-h">APC Beta</h2>' +
         '<p>Testversion. Sie arbeitet mit einer eigenen Kopie der Daten. Die richtige APC-App bleibt unverändert.</p>' +
         '<p>' + (when ? 'Daten zuletzt aus der richtigen App kopiert: ' + fmt(when) + '.' : 'Noch keine Daten aus der richtigen App kopiert.') + '</p>' +
+        '<p><b>Auf iPad und iPhone</b> hat jede App auf dem Home-Bildschirm ihren eigenen Speicher. Dann so übernehmen: in der richtigen App unter Eltern → «Sicherung erstellen», hier in der Beta unter Eltern → «Sicherung wiederherstellen».</p>' +
+        '<p id="beta-msg" role="status"></p>' +
         '<button class="b1" id="beta-copy">Daten aus der Hauptversion kopieren</button>' +
         '<button class="b2" id="beta-close">Schliessen</button></div>';
       document.body.appendChild(ov);
@@ -75,6 +77,10 @@
       ov.onclick = function(e){ if (e.target === ov) close(); };
       ov.querySelector('#beta-close').onclick = close;
       ov.querySelector('#beta-copy').onclick = function(){
+        if (!realKeys(LS).some(function(k){ return k.indexOf(PROD) === 0; })){
+          ov.querySelector('#beta-msg').textContent = 'Hier sind keine Daten der richtigen App sichtbar. Bitte den Weg über die Sicherung nehmen (siehe oben).';
+          return;
+        }
         if (!confirm('Die Beta-Daten werden durch eine frische Kopie aus der richtigen App ersetzt. Weiter?')) return;
         copyFromProd(); location.reload();
       };
