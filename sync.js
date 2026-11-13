@@ -8,7 +8,7 @@
 (function(){
   'use strict';
   // ---- Einstellungen pro App (Beta und richtige App haben je ein eigenes Supabase-Projekt) ----
-  var CFG = { url:'', key:'' };   // z. B. url:'https://xxxx.supabase.co', key:'sb_publishable_…'
+  var CFG = { url:'https://dnnomxgmyjyekjzynsce.supabase.co', key:'sb_publishable_4xyzFcj6S4yK5uthJ8wDWw_38FVKdN1' };   // Beta-Projekt apc-beta (öffentliche Angaben)
 
   var LS; try { LS = window.localStorage; } catch(e){ return; }
   if (!LS) return;
