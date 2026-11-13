@@ -220,8 +220,11 @@
   }
   function mount(el){ box = el; if (!box) return; box.classList.add('sync-box'); paint(); }
   var st = document.createElement('style');
-  st.textContent = '.sync-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.sync-form label{display:flex;flex-direction:column;gap:4px;color:var(--muted);font-size:.9rem}' +
-    '.sync-form input{min-height:44px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel-2);color:var(--text);font:inherit;padding:6px 12px}.sync-err{color:var(--red)}';
+  // Hohe Spezifität, weil die App alle Eingabefelder in den Eltern-Boxen als kleine Häkchen gestaltet (.pbox input)
+  st.textContent = '.pbox .sync-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}' +
+    '.pbox .sync-form label{display:flex;flex-direction:column;align-items:stretch;gap:4px;color:var(--muted);font-size:.9rem;cursor:default}' +
+    '.pbox .sync-form input{width:100%;height:auto;min-height:46px;box-sizing:border-box;border-radius:10px;border:1.5px solid var(--line);background:var(--panel-2);color:var(--text);font:inherit;font-size:16px;padding:8px 12px;accent-color:auto}' +
+    '.pbox .sync-err{color:var(--red)}';
   (document.head || document.documentElement).appendChild(st);
 
   // ---- Zeitplan: beim Start, beim Zurückkehren in die App und jede Minute ----
