@@ -5,6 +5,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#09111F">
 <script src="beta.js"></script><!--NUR-BETA: diese Zeile nie in die richtige App übernehmen-->
+<script src="sync.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
@@ -3193,6 +3194,7 @@ function show(name){
   if (name !== 'avatar') closeAvatar3D();
   if (name !== 'card') closeCard3D();
   ['center','briefing','trophies','missions','music','records','test','card','avatar','season','setup','player','progress','parents','log','analytics','report','camps'].forEach(n => { $('screen-' + n).hidden = (n !== name); });
+  window.APC_screen = name;   // für den Cloud-Abgleich: neue Daten nur auf ruhigen Seiten übernehmen
   { const tab = { center:'heute', music:'eltern', missions:'trainings', briefing:'trainings', setup:'trainings', progress:'fortschritt', card:'fortschritt', avatar:'fortschritt', trophies:'fortschritt', records:'fortschritt', test:'fortschritt', season:'fortschritt', log:'fortschritt', analytics:'fortschritt', parents:'eltern', report:'eltern', camps:'eltern' }[name];
     document.querySelectorAll('#tabbar [data-tab]').forEach(b => { if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }); }
   $('btn-home').hidden = (name === 'center');
@@ -4505,7 +4507,7 @@ function renderParents(){
       <p class="pnote">${(() => { const t = lastTest(); if (!t) return 'Noch kein Testtag gemacht – im Mission Center erscheint «Test fällig».'; const due = new Date(Date.parse(t.at) + testDays() * 864e5); return `Letzter Testtag am ${fmtDate(t.at)} · nächster fällig ab ${fmtDate(due.toISOString())}.`; })()}</p>
       <label for="testmode"><input type="checkbox" id="testmode" ${settings.speed > 1 ? 'checked' : ''}> Testmodus: Mission läuft 10× schneller</label>
       <div><button class="btn btn-ghost btn-small" id="btn-reset">Fortschritt zurücksetzen</button></div>
-      <p>Alle Daten bleiben nur auf diesem Gerät, es wird nichts übertragen. Für einen Gerätewechsel unten eine Sicherung erstellen.</p>
+      <p>${window.APCSync && window.APCSync.status().linked ? 'Die Daten werden über das Familien-Login mit der Cloud abgeglichen (siehe «Cloud-Abgleich»). Eigene Bilder bleiben nur auf diesem Gerät.' : 'Alle Daten bleiben nur auf diesem Gerät, es wird nichts übertragen. Für einen Gerätewechsel unten eine Sicherung erstellen.'}</p>
     </div></div>
     <div class="parents"><div class="pbox">
       <p class="eyebrow">Demomodus</p>
@@ -4530,6 +4532,7 @@ function renderParents(){
       <p>Übersicht für einen frei wählbaren Zeitraum: APC- und Club-Trainings, Camps, Feedback, Schmerzen, Rekorde und Abzeichen. Als PDF speichern, drucken oder teilen.</p>
       <div class="bk-row"><button class="btn btn-primary btn-small" id="btn-report">Bericht öffnen</button></div>
     </div></div>
+    <div class="parents"><div class="pbox backup" id="sync-box"></div></div>
     <div class="parents"><div class="pbox backup">
       <p class="eyebrow">Sicherung</p>
       <p>Speichert Name, Fortschritt, Wochenplan, Camps, Einstellungen und Coach-Aufnahmen als Datei. Damit lässt sich der Stand nach einem Gerätewechsel oder Datenverlust wiederherstellen.</p>
@@ -4541,6 +4544,7 @@ function renderParents(){
       <p id="bk-msg" aria-live="polite"></p>
     </div></div>
   </div>`;
+  if (window.APCSync) window.APCSync.mount($('sync-box')); else { const sb = $('sync-box'); if (sb) sb.parentNode.remove(); }
   bindPlanner();
   bindFerien(() => { const sc = $('screen-parents'), y = sc.scrollTop; renderParents(); sc.scrollTop = y; });
   { const b = $('btn-plan-next'); if (b) b.onclick = () => { plannerMon = addDays(monOf(new Date()), 7); plannerOpen = null; markPlanSeen(plannerMon); renderParents();
@@ -5233,7 +5237,7 @@ const Backup = (() => {
     t.oncomplete = () => { db.close(); res(out && out.result); }; t.onerror = () => { db.close(); rej(t.error); }; }));
   async function create(withMusic){
     const data = {};
-    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith('apc.')) data[k] = localStorage.getItem(k); }
+    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith('apc.') && !k.startsWith('apc.sync.')) data[k] = localStorage.getItem(k); }   // Anmeldedaten des Cloud-Abgleichs nie in die Datei
     let music = null;
     if (withMusic){
       music = [];
@@ -5245,9 +5249,9 @@ const Backup = (() => {
   async function restore(b){
     if (!b || b.format !== FORMAT || typeof b.data !== 'object') throw new Error('Das ist keine APC-Sicherung.');
     if (b.version > VERSION) throw new Error('Diese Sicherung stammt aus einer neueren App-Version.');
-    const old = []; for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith('apc.')) old.push(k); }
+    const old = []; for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith('apc.') && !k.startsWith('apc.sync.')) old.push(k); }
     old.forEach(k => localStorage.removeItem(k));
-    for (const [k, v] of Object.entries(b.data)) if (k.startsWith('apc.') && typeof v === 'string') localStorage.setItem(k, v);
+    for (const [k, v] of Object.entries(b.data)) if (k.startsWith('apc.') && !k.startsWith('apc.sync.') && typeof v === 'string') localStorage.setItem(k, v);
     if (Array.isArray(b.music)){   // nur ersetzen, wenn die Sicherung Musik enthält
       const tracks = [];
       for (const m of b.music){ try { tracks.push({ id:m.id || (Date.now() + '-' + Math.random().toString(36).slice(2)), name:m.name || 'Track', added:m.added || Date.now(), blob:await dataURLToBlob(m.data) }); } catch(e){} }
