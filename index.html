@@ -1212,7 +1212,15 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
 .rp-notes textarea{width:100%;box-sizing:border-box;border:1px solid var(--l);border-radius:6px;padding:10px;font:inherit;color:#2B3440;background:#fff;resize:vertical;min-height:80px}
 .rp-note-print{min-height:70px;border:1px solid var(--l);border-radius:6px;padding:10px;white-space:pre-wrap;
   background-image:repeating-linear-gradient(transparent 0 23px,var(--l) 23px 24px)}
-.app-ver{text-align:center;font-size:12px;letter-spacing:.08em;color:var(--silver);opacity:.7;margin:18px 0 6px}
+.app-ver{display:flex;justify-content:center;margin:18px 0 6px}
+.app-ver-b{min-height:44px;padding:0 20px;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--muted);font-family:var(--f-display);font-weight:700;font-size:.95rem;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.app-ver-b:active{transform:scale(.97)}
+.wn .fbk-card{max-width:560px;text-align:left;max-height:calc(100vh - 40px);overflow:auto}
+.wn-v{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.wn-v h3{font-size:1.5rem;display:flex;align-items:baseline;gap:10px}.wn-v h3 small{font-family:var(--f-body);font-weight:500;font-size:.85rem;text-transform:none;color:var(--muted)}
+.wn-sec .eyebrow{margin:0 0 4px;font-size:.85rem}.wn-sec .wn-neu{color:var(--ok)}.wn-sec .wn-fix{color:var(--gold)}
+.wn-sec ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.wn .btn-primary{align-self:stretch}
 .rp-foot{border-top:1px solid var(--l);padding-top:8px;font-size:11px;color:var(--g)}
 @media (max-width:640px){
   .rp-paper{padding:0 16px 18px}.rp-top{margin:0 -16px 14px;padding:10px 16px}
@@ -1273,7 +1281,7 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
 })();</script>
 <div id="app" lang="de">
   <header class="topbar">
-    <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><b>APC 1.7</b><span>Family Edition</span></div>
+    <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><b>APC 1.8</b><span>Family Edition</span></div>
     <div class="toggles" role="group" aria-label="Navigation und Ton">
       <button class="tog" id="btn-home" hidden aria-label="Zum Mission Center"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L12 3 L21 11 M6 9 V21 H18 V9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Mission Center</span></button>
       <button class="tog" id="tog-music" aria-pressed="false" hidden>Musik</button>
@@ -1341,7 +1349,21 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '1.7';
+const APP_VERSION = '1.8';
+/* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
+const CHANGELOG = [
+  { v:'1.8', date:'14.11.2026',
+    neu:['Nach jedem Update zeigt die APC einmal, was neu ist.',
+         'Im Eltern-Bereich: alle Versionen mit Neuerungen und Fehlerbehebungen (Versionsnummer unten antippen).'],
+    fix:[] },
+  { v:'1.7', date:'14.11.2026',
+    neu:['Cloud-Abgleich mit Familien-Login: gleiche Daten auf beiden iPads.',
+         'Versionsnummer im Kopf, im Eltern-Bereich, im Bericht und in der Sicherung.'],
+    fix:['Eingabefelder für E-Mail und Passwort im Cloud-Abgleich sind sichtbar.'] },
+  { v:'1.6', date:'13.11.2026',
+    neu:['Leistungstests als Kurven unter Fortschritt → Analytics, mit Bestwert und Vergleich zum letzten Test.'],
+    fix:[] }
+];
 const APP_LABEL = 'APC ' + APP_VERSION + (/\/apc-beta\//.test(location.pathname) ? ' Beta' : '');
 const PROFILE = (() => {   // Name wird nur lokal auf dem Gerät gespeichert, nicht im Code
   let n = ''; try { n = localStorage.getItem('apc.name') || ''; } catch(e){}
@@ -4548,7 +4570,7 @@ function renderParents(){
       </div>
       <p id="bk-msg" aria-live="polite"></p>
     </div></div>
-    <p class="app-ver">${APP_LABEL}</p>
+    <div class="app-ver"><button class="app-ver-b" id="btn-whatsnew" type="button">${APP_LABEL} · Was ist neu <span aria-hidden="true">›</span></button></div>
   </div>`;
   if (window.APCSync) window.APCSync.mount($('sync-box')); else { const sb = $('sync-box'); if (sb) sb.parentNode.remove(); }
   bindPlanner();
@@ -4564,6 +4586,7 @@ function renderParents(){
     } else { reset.dataset.armed = '1'; reset.textContent = 'Wirklich zurücksetzen? Nochmals tippen'; }
   };
   bindBackup();
+  { const b = $('btn-whatsnew'); if (b) b.onclick = () => showWhatsNew(CHANGELOG, true); }
   $('btn-report').onclick = openReport;
   $('btn-camps').onclick = openCamps;
   { const redraw = () => { const sc = $('screen-parents'), y = sc.scrollTop; renderParents(); sc.scrollTop = y; };
@@ -6483,6 +6506,33 @@ function avatarEditorHTML(){
     <div class="av-row"><span></span><button class="btn btn-ghost btn-small" id="av-reset">Standard</button></div>
   </div>`;
 }
+/* «Was ist neu»: Fenster einmal nach einem Update (Variante A) und ganze Liste im Eltern-Bereich (Variante B) */
+const WN_KEY = 'apc.seenVersion';   // pro Gerät, wird nicht in die Cloud abgeglichen
+function vRank(v){ const [a, b = ''] = String(v).split('.'); return (+a || 0) * 100 + (+(b[0] || 0)) * 10 + (+(b[1] || 0)); }
+function showWhatsNew(list, all){
+  document.querySelectorAll('.wn').forEach(x => x.remove());
+  const sec = (cls, title, items) => items.length ? `<div class="wn-sec"><p class="eyebrow ${cls}">${title}</p><ul>${items.map(t => `<li>${t}</li>`).join('')}</ul></div>` : '';
+  const ov = document.createElement('div'); ov.className = 'fbk wn'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-labelledby', 'wn-h');
+  ov.innerHTML = `<div class="fbk-card">
+    <div><p class="eyebrow" style="margin:0">${all ? 'Installiert: ' + APP_LABEL : 'Update · APC ' + list[0].v}</p><h2 id="wn-h">Was ist neu</h2></div>
+    ${list.map((c, i) => `<div class="wn-v${all && i === 0 ? ' now' : ''}">${all || list.length > 1 ? `<h3>APC ${c.v} <small>${c.date}${all && i === 0 ? ' · aktuell' : ''}</small></h3>` : ''}
+      ${sec('wn-neu', 'Neu', c.neu)}${sec('wn-fix', 'Fehlerbehebungen', c.fix)}${all && !c.neu.length && !c.fix.length ? '<p class="muted">Keine Angaben</p>' : ''}</div>`).join('')}
+    <button class="btn btn-primary" id="wn-ok" type="button">${all ? 'Schliessen' : 'Los geht\'s'}</button></div>`;
+  document.body.appendChild(ov);
+  $('wn-ok').onclick = () => ov.remove();
+}
+function checkWhatsNew(){
+  let seen = null, hasData = false;
+  try {
+    seen = localStorage.getItem(WN_KEY);
+    for (let i = 0; i < localStorage.length; i++){ const k = localStorage.key(i); if (k && k.startsWith('apc.') && k !== WN_KEY){ hasData = true; break; } }
+    localStorage.setItem(WN_KEY, APP_VERSION);
+  } catch(e){ return; }
+  if (seen === APP_VERSION || (!seen && !hasData)) return;   // schon gesehen oder ganz neue Installation
+  const list = seen ? CHANGELOG.filter(c => vRank(c.v) > vRank(seen) && vRank(c.v) <= vRank(APP_VERSION)) : CHANGELOG.filter(c => c.v === APP_VERSION);
+  if (list.length) showWhatsNew(list, false);
+}
+
 /* Freischalt-Moment: Karte mit drehendem 3D-Avatar, der das neue Teil trägt */
 let unl3d = null;
 function showUnlocks(list){
@@ -6981,6 +7031,7 @@ try { Sound.setMode('calm'); if (settings.music) Sound.unlock(); } catch(e){}
 syncToggles();
 renderCenter();
 show('center');
+checkWhatsNew();
 })();
 </script>
 
