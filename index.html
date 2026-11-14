@@ -880,6 +880,18 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .pc.xday{border-left-color:var(--gold)}
 .pc.recov{border-left-color:#ff8a3d;color:#ff8a3d}
 .pe-min{width:72px}
+.pc.zt{border-left-color:var(--ice);color:var(--ice)} .pc.zt.missed{border-left-color:var(--gold);color:var(--gold)} .pc.zt.plan{border-left-style:dashed}
+.zt-box{display:flex;flex-direction:column;gap:10px;flex-basis:100%}
+.zt-item{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--ice);border-radius:12px;background:var(--panel)}
+.zt-item.missed{border-left-color:var(--gold)}
+.zt-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.zt-top small{display:block;color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.zt-chips{display:flex;flex-wrap:wrap;gap:8px}
+.zt-form{display:flex;flex-direction:column;gap:12px;padding:12px 14px;border:1px solid var(--ice);border-radius:14px;background:var(--panel-2)}
+.zt-form .pselect{width:100%;min-width:0;box-sizing:border-box}
+.zt-dur{display:flex;align-items:center;gap:10px}
+.zt-dur .btn{min-width:48px}
+.zt-dur b{font-family:var(--f-display);font-size:1.3rem;min-width:80px;text-align:center}
 .pe-hint{flex-basis:100%;margin:0;font-size:.85rem}
 .pc.camp{border-left-color:var(--ice);color:var(--ice)} .pc.camp.special{border-left-color:var(--gold);color:var(--gold)}
 .pc.camp.nb{border:1px dashed currentColor;border-left-width:3px;background:transparent}
@@ -1349,9 +1361,14 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '1.91';
+const APP_VERSION = '1.92';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'1.92', date:'14.11.2026',
+    neu:['Wochenplan: Zusatztrainings ausserhalb des Clubs erfassen, z. B. synthetisches Eis in der Garage (Art, Ort, Dauer, Notiz, Status).',
+         'Gemachte Zusatztrainings geben +50 Bonus-XP (Extra-Schicht, höchstens 3 pro Woche).',
+         'Monatsbericht und PDF zeigen die Zusatztrainings mit Anzahl und Minuten pro Art.'],
+    fix:[] },
   { v:'1.91', date:'14.11.2026',
     neu:['Extra-Schicht: Zusatz-Eistrainings, Camps und Spezialtrainings geben +50 Bonus-XP (höchstens 3 pro Woche).',
          'Neue Bonus-XP erscheinen einmal als Meldung im Mission Center.'],
@@ -3364,8 +3381,21 @@ const saveRecov = () => { Object.keys(recov).forEach(k => { if (!recov[k].sauna 
 const RECOV_KIND = [['sauna', 'Sauna', 16], ['whirl', 'Whirlpool', 12]];   // [Schlüssel, Name, Standard-Minuten]
 const recovOn = d => recov[ymd(d)] || null;
 const recovChipsHTML = d => { const r = recovOn(d); return r ? RECOV_KIND.filter(([k]) => r[k]).map(([k, n]) => `<span class="pc recov">${n} ${r[k]} Min</span>`).join('') : ''; };
+/* Zusatztrainings (APC 1.92): eigene Trainings ausserhalb des Clubs, z. B. synthetisches Eis in der Garage.
+   apc.zusatz.v1 { 'JJJJ-MM-TT': [{ id, art, ort, place, min, note, s:'plan'|'done'|'missed' }] }
+   Nur im Eltern-Bereich bearbeitbar; im Mission Center nur zur Info. «Gemacht» gibt Bonus-XP über die Extra-Schicht. */
+const zusatz = store.get('apc.zusatz.v1', {});
+const saveZusatz = () => { Object.keys(zusatz).forEach(k => { if (!Array.isArray(zusatz[k]) || !zusatz[k].length) delete zusatz[k]; }); store.set('apc.zusatz.v1', zusatz); syncExtraXP(); };
+const ZT_ART = [['synth', 'Synthetisches Eis'], ['ice', 'Zusatz-On-Ice'], ['private', 'Privatlektion'], ['athletik', 'Off-Ice / Athletik'], ['other', 'Anderes']];
+const ZT_ORT = [['home', 'Zuhause / Garage'], ['rink', 'Eishalle'], ['other', 'Anderer Ort']];
+const ZT_ST = [['plan', 'Geplant'], ['done', 'Gemacht'], ['missed', 'Ausgelassen']];
+const ztArt = a => (ZT_ART.find(x => x[0] === a) || ZT_ART[ZT_ART.length - 1])[1];
+const ztOrt = z => z.ort === 'other' ? (z.place || 'Anderer Ort') : (ZT_ORT.find(x => x[0] === z.ort) || ZT_ORT[0])[1];
+const ztStTxt = s => (ZT_ST.find(x => x[0] === s) || ZT_ST[0])[1];
+const zusatzOn = d => zusatz[ymd(d)] || [];
+const ztChipsHTML = d => zusatzOn(d).map(z => `<span class="pc zt ${z.s}">${ztArt(z.art)} ${z.min} Min${z.s === 'done' ? ' ✓' : z.s === 'missed' ? ' ✗' : ''}</span>`).join('');
 const campsOn = d => { const k = ymd(d); return camps.filter(c => c.from && c.from <= k && k <= c.to); };
-/* Extra-Schicht (APC 1.91): Bonus-XP für Zusatztrainings.
+/* Extra-Schicht (APC 1.91, ab 1.92 inkl. Zusatztrainings aus apc.zusatz.v1 mit Status «Gemacht»): Bonus-XP für Zusatztrainings.
    - Zusatz-On-Ice (Tag ohne Eistraining in der Standardwoche), im Eltern-Bereich als «Gemacht» bestätigt
    - gebuchte Camps und Spezialtrainings: pro Tag, sobald der Tag erreicht ist
    Je EXTRA_XP, höchstens EXTRA_MAX pro Woche (Mo–So). Gezählt wird erst ab Einführung (progress.extraSince).
@@ -3376,6 +3406,7 @@ const EXTRA_XP = 50, EXTRA_MAX = 3, XSEEN_KEY = 'apc.xseen.v1';
 function extraCandidates(){
   const out = [], today = ymd(new Date()), L = clubLog();
   Object.keys(L).forEach(day => { const e = L[day]; if (day <= today && e.on && e.on.s === 'done' && planFor(ymdDate(day)).extra) out.push({ id:'ice|' + day, day, label:'Zusatz-Eistraining' }); });
+  Object.keys(zusatz).forEach(day => { if (day <= today) (zusatz[day] || []).forEach(z => { if (z.s === 'done') out.push({ id:'zt|' + z.id, day, label:'Zusatztraining: ' + ztArt(z.art) }); }); });
   camps.filter(c => c.booked && c.from && c.to && c.from <= c.to).forEach(c => {
     for (let d = ymdDate(c.from), n = 0; ymd(d) <= c.to && ymd(d) <= today && n < 60; d = addDays(d, 1), n++)
       out.push({ id:'camp|' + c.id + '|' + ymd(d), day:ymd(d), label:`${CAMP_KIND[c.kind]}: ${c.name || ''}`.trim() });
@@ -3445,6 +3476,7 @@ function planChipsHTML(d, e, dt){
     m ? `<span class="pc apc load-b-${m.load}">Set ${m.n} · ${m.title}</span>` : '',
     d.extra ? '<span class="pc xday">Zusatztraining</span>' : '',
     dt ? recovChipsHTML(dt) : '',
+    dt ? ztChipsHTML(dt) : '',
     ...(dt ? campsOn(dt).map(c => `<span class="pc camp ${c.kind}${c.booked ? '' : ' nb'}">${CAMP_KIND[c.kind]}: ${rpEsc(c.name)}${c.booked ? '' : ' (nicht gebucht)'}</span>`) : []),
     d.note ? `<span class="pc xday">${rpEsc(d.note)}</span>` : d.custom && !d.extra ? '<span class="pc xday">angepasst</span>' : ''
   ].join('') || '<span class="pc rest">Ruhetag</span>';
@@ -3525,6 +3557,46 @@ function bindPlanPick(m){
   });
 }
 
+/* ---- Eltern: Zusatztrainings pro Tag im Tages-Editor des Wochenplans (APC 1.92) ---- */
+let ztEdit = null, ztDraft = null, ztDay = null;   // ztEdit: id des Eintrags oder 'new'; ztDay: Datum, an dem bearbeitet wird
+const ztNew = day => ({ id:'zt' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), art:'synth', ort:'home', place:'', min:30, note:'', s:day <= ymd(new Date()) ? 'done' : 'plan' });
+function ztFormHTML(z, isNew){
+  const chips = (L, key, cur) => L.map(([v, l]) => `<button type="button" class="av-chip" data-ztf="${key}|${v}" aria-pressed="${cur === v}">${l}</button>`).join('');
+  return `<div class="zt-form" role="group" aria-label="Zusatztraining ${isNew ? 'erfassen' : 'bearbeiten'}">
+    <span class="pe-lbl">Art</span><div class="zt-chips">${chips(ZT_ART, 'art', z.art)}</div>
+    <span class="pe-lbl">Ort</span><div class="zt-chips">${chips(ZT_ORT, 'ort', z.ort)}</div>
+    ${z.ort === 'other' ? `<label class="cp-f"><span class="pe-lbl">Anderer Ort</span><input type="text" id="zt-place" class="pselect" maxlength="40" value="${rpEsc(z.place || '')}" placeholder="z. B. Eisfeld im Quartier"></label>` : ''}
+    <span class="pe-lbl">Dauer</span><div class="zt-dur"><button type="button" class="btn btn-ghost btn-small" data-ztmin="-5" aria-label="5 Minuten weniger">−</button><b>${z.min} Min</b><button type="button" class="btn btn-ghost btn-small" data-ztmin="5" aria-label="5 Minuten mehr">+</button></div>
+    <label class="cp-f"><span class="pe-lbl">Notiz</span><input type="text" id="zt-note" class="pselect" maxlength="60" value="${rpEsc(z.note || '')}" placeholder="z. B. Stickhandling, Schüsse"></label>
+    <span class="pe-lbl">Status</span><div class="zt-chips">${chips(ZT_ST, 's', z.s)}</div>
+    <div class="pe-row"><button type="button" class="btn btn-primary btn-small" id="zt-save">Speichern</button><button type="button" class="btn btn-ghost btn-small" id="zt-cancel">Abbrechen</button>${isNew ? '' : '<button type="button" class="btn btn-ghost btn-small" id="zt-del">Löschen</button>'}</div>
+  </div>`;
+}
+function ztEditorHTML(day){
+  const L = zusatz[day] || [], ed = ztDay === day ? ztEdit : null, X = progress.extraXP || {};
+  return `<div class="pe-row"><div class="zt-box"><span class="pe-lbl">Zusatztrainings</span>
+    ${L.map(z => ed === z.id ? ztFormHTML(ztDraft, false) : `<div class="zt-item ${z.s}"><div class="zt-top"><span><b>${ztArt(z.art)}</b><small>${rpEsc(ztOrt(z))} · ${z.min} Min${z.note ? ' · ' + rpEsc(z.note) : ''}</small></span><button type="button" class="btn btn-ghost btn-small" data-zted="${z.id}">Ändern</button></div>
+      <div class="zt-chips" role="group" aria-label="Status ${ztArt(z.art)}">${ZT_ST.map(([s, l]) => `<button type="button" class="av-chip" data-zts="${z.id}|${s}" aria-pressed="${z.s === s}">${l}</button>`).join('')}${z.s === 'done' && X['zt|' + z.id] ? `<span class="muted">+${EXTRA_XP} XP</span>` : ''}</div></div>`).join('')}
+    ${ed === 'new' ? ztFormHTML(ztDraft, true) : ed ? '' : '<button type="button" class="btn btn-ghost btn-small" id="zt-add">+ Zusatztraining</button>'}
+    <p class="muted pe-hint">Trainings ausserhalb des Clubs, z. B. synthetisches Eis in der Garage. «Gemacht» gibt +${EXTRA_XP} XP (Extra-Schicht, höchstens ${EXTRA_MAX} pro Woche).</p>
+  </div></div>`;
+}
+function bindZusatz(host, zday, redraw){
+  const mine = ztDay === zday && ztEdit && ztDraft, done = () => { ztEdit = ztDraft = ztDay = null; };
+  const add = $('zt-add'); if (add) add.onclick = () => { ztEdit = 'new'; ztDay = zday; ztDraft = ztNew(zday); redraw(); };
+  host.querySelectorAll('[data-zted]').forEach(b => b.onclick = () => { const z = (zusatz[zday] || []).find(x => x.id === b.dataset.zted); if (!z) return; ztEdit = z.id; ztDay = zday; ztDraft = Object.assign({}, z); redraw(); });
+  host.querySelectorAll('[data-zts]').forEach(b => b.onclick = () => { const [id, s] = b.dataset.zts.split('|'), z = (zusatz[zday] || []).find(x => x.id === id); if (!z) return; z.s = s; saveZusatz(); redraw(); });
+  if (!mine) return;
+  host.querySelectorAll('[data-ztf]').forEach(b => b.onclick = () => { const [k, v] = b.dataset.ztf.split('|'); ztDraft[k] = v; redraw(); });
+  host.querySelectorAll('[data-ztmin]').forEach(b => b.onclick = () => { ztDraft.min = Math.min(240, Math.max(5, (ztDraft.min || 30) + +b.dataset.ztmin)); redraw(); });
+  const pl = $('zt-place'); if (pl) pl.oninput = e => { ztDraft.place = e.target.value.trim(); };
+  $('zt-note').oninput = e => { ztDraft.note = e.target.value.trim(); };
+  $('zt-save').onclick = () => { const L = zusatz[zday] = zusatz[zday] || [], i = L.findIndex(x => x.id === ztDraft.id); if (ztDraft.ort !== 'other') ztDraft.place = '';
+    if (i < 0) L.push(ztDraft); else L[i] = ztDraft; done(); saveZusatz(); redraw(); };
+  $('zt-cancel').onclick = () => { done(); redraw(); };
+  const del = $('zt-del'); if (del) del.onclick = () => { if (!confirm('Dieses Zusatztraining löschen?')) return; const id = ztDraft.id; zusatz[zday] = (zusatz[zday] || []).filter(x => x.id !== id); done(); saveZusatz(); redraw(); };
+}
+
 /* ---- Eltern: Wochenplan mit echten Daten (Woche wählen) oder Standardwoche (Vorlage) ---- */
 let plannerOpen = null, plannerMon = null;   // plannerMon: Montag (Date) · 'tpl' = Standardwoche · null = Standard (diese/nächste Woche)
 const plMon = () => plannerMon === 'tpl' ? null : (plannerMon || defaultPlanMon());
@@ -3561,6 +3633,7 @@ function plannerHTML(){
       ${tpl ? '' : `<div class="pe-row"><span class="pe-lbl">Recovery</span>${RECOV_KIND.map(([k, n, def]) => { const r = recovOn(addDays(mon, i)) || {}, on = !!r[k];
           return `<label class="pe-tog"><input type="checkbox" id="pe-${k}" ${on ? 'checked' : ''}> ${n}</label><input class="pe-time pe-min" id="pe-${k}-min" type="number" inputmode="numeric" min="1" max="90" value="${on ? r[k] : def}" ${on ? '' : 'disabled'} aria-label="${n} Minuten"><span class="muted">Min</span>`; }).join('')}
         <p class="muted pe-hint">Für Kinder: Sauna max. 2 Gänge à 6–10 Min, untere Bank. Whirlpool 10–15 Min. Keine Wärme bei frischer Prellung oder Schwellung.</p></div>`}
+      ${tpl ? '' : ztEditorHTML(ymd(addDays(mon, i)))}
       ${tpl ? '' : `<div class="pe-row"><label for="pe-note" class="pe-lbl">Notiz</label><input type="text" id="pe-note" class="pselect" maxlength="40" value="${rpEsc(d.note || '')}" placeholder="z. B. Training verschoben"></div>`}
       <div class="pe-row"><button class="btn btn-ghost btn-small" id="pe-close">Fertig</button>${!tpl && isCustom(d) ? '<button class="btn btn-ghost btn-small" id="pe-reset">Wie Standardwoche</button>' : ''}</div>
     </div>`;
@@ -3620,6 +3693,7 @@ function bindPlanner(){
         $('pe-' + k + '-min').onchange = e => { const v = Math.min(90, Math.max(1, Math.round(+e.target.value) || def)); (recov[key] = recov[key] || {})[k] = v; rr(); };
       }); }
     if (!tpl) $('pe-note').onchange = e => { d.note = e.target.value.trim(); upd(); };
+    if (!tpl) bindZusatz(host, ymd(addDays(mon, dayIdx(plannerOpen))), redraw);
     $('pe-close').onclick = () => { plannerOpen = null; redraw(); };
     const r = $('pe-reset'); if (r) r.onclick = () => { const dt = addDays(mon, dayIdx(plannerOpen)); daysStore[ymd(dt)] = tplDay(dt); saveDays(); redraw(); };
   }
@@ -4849,7 +4923,8 @@ function reportData(from, to){
     pil, bySet, fbl, aS:avg(fbl.map(e => e.fb.strain)), aF:avg(fbl.filter(e => e.fb.fun).map(e => e.fb.fun)),
     pains, prevPains, byArea, recs, badges, tests, skips:log.filter(e => e.skips).length, club,
     camps:camps.filter(c => c.booked && c.from && ymdDate(c.to).getTime() >= F && ymdDate(c.from).getTime() <= T).sort((a, b) => a.from < b.from ? -1 : 1),
-    recov:Object.keys(recov).filter(k => { const t = ymdDate(k).getTime(); return t >= F && t <= T && (recov[k].sauna || recov[k].whirl); }).sort().map(k => Object.assign({ day:k }, recov[k])) };
+    recov:Object.keys(recov).filter(k => { const t = ymdDate(k).getTime(); return t >= F && t <= T && (recov[k].sauna || recov[k].whirl); }).sort().map(k => Object.assign({ day:k }, recov[k])),
+    zusatz:Object.keys(zusatz).filter(k => { const t = ymdDate(k).getTime(); return t >= F && t <= T; }).sort().flatMap(k => (zusatz[k] || []).map(z => Object.assign({ day:k }, z))) };
 }
 
 const CLUB_WHY_TXT = Object.assign(Object.fromEntries(CLUB_WHY), { ohne:'ohne Grund' });
@@ -4860,6 +4935,7 @@ function clubFazit(D){
     return `${l} ${x.done} von ${n}${add.length ? ` (${add.join(', ')})` : ''}`; };
   const t = [part('on', 'On-Ice'), part('off', 'Off-Ice'), part('game', 'Matches/Turniere')].filter(Boolean);
   if (t.length) out.push(`Club-Trainings: ${t.join(', ')}.`);
+  { const Z = (D.zusatz || []).filter(z => z.s === 'done'); if (Z.length) out.push(`Zusatztrainings: ${Z.length} gemacht (${Z.reduce((s, z) => s + (z.min || 0), 0)} Minuten).`); }
   if (c.off.missed >= 3) warn.push(`Off-Ice ${c.off.missed}× ausgelassen (${clubWhyTxt(c.why.off)}).`);
   if (c.on.missed >= 2) warn.push(`On-Ice ${c.on.missed}× ausgelassen (${clubWhyTxt(c.why.on)}).`);
   const open = c.on.open + c.off.open + c.game.open;
@@ -4897,6 +4973,19 @@ function rpRecovHTML(D){
   return `<section class="rp-sec"><h2>Recovery (Sauna und Whirlpool)</h2><table class="rp-tab rp-grid"><thead><tr><th>Datum</th><th class="r">Sauna</th><th class="r">Whirlpool</th></tr></thead><tbody>
     ${D.recov.map(r => `<tr><td>${rpDate(ymdDate(r.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' })}</td><td class="r">${r.sauna ? r.sauna + ' Min' : '–'}</td><td class="r">${r.whirl ? r.whirl + ' Min' : '–'}</td></tr>`).join('')}
     </tbody></table><p class="rp-cap">${rpRecovLine(D)}</p></section>`;
+}
+/* Zusatztrainings (APC 1.92): Übersicht nach Art und einzelne Einträge */
+const rpZtSum = D => { const L = D.zusatz || []; return ZT_ART.map(([a, n]) => { const X = L.filter(z => z.art === a); return { n, done:X.filter(z => z.s === 'done').length, missed:X.filter(z => z.s === 'missed').length, min:X.filter(z => z.s === 'done').reduce((s, z) => s + (z.min || 0), 0) }; }).filter(x => x.done || x.missed); };
+const rpZtTot = S => S.reduce((t, x) => ({ done:t.done + x.done, missed:t.missed + x.missed, min:t.min + x.min }), { done:0, missed:0, min:0 });
+function rpZusatzHTML(D){
+  const L = (D.zusatz || []).filter(z => z.s !== 'plan'); if (!L.length) return '';
+  const S = rpZtSum(D), t = rpZtTot(S);
+  return `<section class="rp-sec"><h2>Zusatztrainings</h2><table class="rp-tab rp-grid"><thead><tr><th>Art</th><th class="r">Gemacht</th><th class="r">Ausgelassen</th><th class="r">Minuten</th></tr></thead><tbody>
+    ${S.map(x => `<tr><td>${x.n}</td><td class="r">${x.done}</td><td class="r">${x.missed || '–'}</td><td class="r">${x.min}</td></tr>`).join('')}
+    <tr><td><b>Total</b></td><td class="r"><b>${t.done}</b></td><td class="r"><b>${t.missed || '–'}</b></td><td class="r"><b>${t.min}</b></td></tr></tbody></table>
+    <table class="rp-tab rp-grid"><thead><tr><th>Datum</th><th>Art</th><th>Ort · Notiz</th><th class="r">Dauer</th><th class="r">Status</th></tr></thead><tbody>
+    ${L.map(z => `<tr><td>${rpDate(ymdDate(z.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' })}</td><td>${ztArt(z.art)}</td><td>${[ztOrt(z), z.note].filter(Boolean).map(rpEsc).join(' · ')}</td><td class="r">${z.min} Min</td><td class="r">${ztStTxt(z.s)}</td></tr>`).join('')}
+    </tbody></table></section>`;
 }
 function rpCampsHTML(D){
   if (!D.camps.length) return '';
@@ -4992,6 +5081,7 @@ function reportPaperHTML(D){
     ${D.len <= 63 * 864e5 ? `<section class="rp-sec"><h2>Trainingskalender</h2>${rpCalendar(D)}</section>` : ''}
     ${D.weeks.length >= 2 ? `<section class="rp-sec"><h2>Regelmässigkeit</h2>${rpWeeks(D)}</section>` : ''}
     ${rpClubHTML(D)}
+    ${rpZusatzHTML(D)}
     ${rpCampsHTML(D)}
     ${rpRecovHTML(D)}
     <div class="rp-two">
@@ -5195,6 +5285,19 @@ async function buildReportPDF(D){
       y += caption('Quote = gemacht von gemacht + ausgelassen. «Ausgefallen» = vom Club abgesagt, zählt nicht. «Offen» = noch nicht bestätigt.');
     }
     y += 16; }
+  // Zusatztrainings (APC 1.92)
+  { const L = (D.zusatz || []).filter(z => z.s !== 'plan');
+    if (L.length){
+      const cx = [M + 6, M + .2 * CW, M + .42 * CW], maxW = [.19, .21, .30].map(f => f * CW), xD = M + .82 * CW;
+      const fit = (s, w) => { let t = clean(s); while (t && fR.widthOfTextAtSize(t, 8.2) > w) t = t.slice(0, -1); return t; };
+      const head = () => { rect(M, y, CW, 17, C.navy); ['Datum', 'Art', 'Ort · Notiz'].forEach((h, i) => txt(h, cx[i], y + 4.5, 8.3, { bold:true, color:C.white })); txt('Dauer', xD, y + 4.5, 8.3, { bold:true, color:C.white, align:'right' }); txt('Status', M + CW - 6, y + 4.5, 8.3, { bold:true, color:C.white, align:'right' }); y += 17; };
+      ensure(22 + 17 + 17 * Math.min(3, L.length) + 24); heading('Zusatztrainings'); y += 24; head();
+      L.forEach((z, i) => { if (y + 17 > BOTTOM){ newPage(); head(); } if (i % 2) rect(M, y, CW, 17, col('#F6F8FA'));
+        [rpDate(ymdDate(z.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' }), ztArt(z.art), [ztOrt(z), z.note].filter(Boolean).join(' · ')].forEach((v, j) => txt(fit(v, maxW[j]), cx[j], y + 4.5, 8.2));
+        txt(z.min + ' Min', xD, y + 4.5, 8.2, { align:'right' }); txt(ztStTxt(z.s), M + CW - 6, y + 4.5, 8.2, { align:'right' }); line(M, y + 17, M + CW, y + 17, C.line); y += 17; });
+      const S = rpZtSum(D), t = rpZtTot(S);
+      ensure(20); y += 6; y += caption(S.map(x => `${x.n}: ${x.done}× · ${x.min} Min`).join(' · ') + ` · Total ${t.done}× gemacht, ${t.min} Min${t.missed ? `, ${t.missed}× ausgelassen` : ''}`) + 14;
+    } }
   // Camps und Spezialtrainings
   if (D.camps.length){
     const cx = [M + 6, M + .16 * CW, M + .36 * CW, M + .58 * CW], maxW = [.15, .19, .21, .20].map(f => f * CW), xP = M + .87 * CW;
