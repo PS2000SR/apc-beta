@@ -17,7 +17,7 @@
   if (!LS) return;
   var SP = Storage.prototype, rawGet = SP.getItem, rawSet = SP.setItem, rawRem = SP.removeItem;
   var META = 'apc.sync.v1';
-  var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg.', 'apc.clips.', 'apc.name', 'apc.theme'];
+  var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg.', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.'];   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
   var MERGE = { 'apc.progress.v1':mergeProgress };
   var syncable = function(k){ k = String(k); return k.indexOf('apc.') === 0 && !SKIP.some(function(p){ return k.indexOf(p) === 0; }); };
   var enabled = !!(CFG.url && CFG.key);

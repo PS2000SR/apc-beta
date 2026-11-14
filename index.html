@@ -1349,9 +1349,13 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '1.9';
+const APP_VERSION = '1.91';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'1.91', date:'14.11.2026',
+    neu:['Extra-Schicht: Zusatz-Eistrainings, Camps und Spezialtrainings geben +50 Bonus-XP (höchstens 3 pro Woche).',
+         'Neue Bonus-XP erscheinen einmal als Meldung im Mission Center.'],
+    fix:['Im Kopf der App steht wieder die aktuelle Versionsnummer.'] },
   { v:'1.9', date:'14.11.2026',
     neu:['Eigenes Login pro Familie: Registrierung mit Vorname, Name und E-Mail.',
          'Neue Familien werden nach der Registrierung freigeschaltet; erst dann öffnet sich die APC.',
@@ -1370,6 +1374,7 @@ const CHANGELOG = [
     fix:[] }
 ];
 const APP_LABEL = 'APC ' + APP_VERSION + (/\/apc-beta\//.test(location.pathname) ? ' Beta' : '');
+{ const b = document.querySelector('.brand b'), t = b && [...b.childNodes].find(n => n.nodeType === 3); if (t) t.nodeValue = 'APC ' + APP_VERSION; }   // Nummer im Kopf immer aus APP_VERSION
 const PROFILE = (() => {   // Name wird nur lokal auf dem Gerät gespeichert, nicht im Code
   let n = ''; try { n = localStorage.getItem('apc.name') || ''; } catch(e){}
   if (!n){ n = ((window.prompt && prompt('Wie heisst du? (Name für die App)')) || '').trim().slice(0, 20) || 'Champ';
@@ -3241,6 +3246,7 @@ function show(name){
   document.body.classList.toggle('voice-off', Voice.mode() === 'off');
   if (name === 'player') $('voice-hint').hidden = Voice.mode() !== 'off';
   $('screen-' + name).scrollTop = 0;
+  if (name === 'center') setTimeout(checkExtraNews, 400);
 }
 /* Zurück zum Mission Center – von jeder Stelle aus */
 function goHome(){
@@ -3312,13 +3318,14 @@ function setClub(day, k, s, r){
   if (s && (!progress.clubSince || day < progress.clubSince)) progress.clubSince = day;   // Nachtrag älterer Tage: Auswertung ab diesem Datum
   if (!Object.keys(e).length) delete L[day];
   saveProgress();
+  syncExtraXP();
 }
 /* Offen = geplant, aber noch nicht bestätigt (oder ausgelassen ohne Grund) */
 const clubOpen = day => { const e = clubLog()[day] || {}; return clubItems(planFor(ymdDate(day))).filter(([k]) => !e[k] || (e[k].s === 'missed' && !e[k].r)); };
 const CLUB_ICO = { done:'✓', missed:'✗', cancelled:'–' };
 function clubRowsHTML(day){
   const e = clubLog()[day] || {}, p = planFor(ymdDate(day));
-  return clubItems(p).map(([k, label, time]) => { const v = e[k] || {}, sub = [time, p.extra && k !== 'game' ? 'Zusatz' : ''].filter(Boolean).join(' · ');
+  return clubItems(p).map(([k, label, time]) => { const v = e[k] || {}, sub = [time, p.extra && k !== 'game' ? 'Zusatz' : '', k === 'on' && (progress.extraXP || {})['ice|' + day] ? `+${EXTRA_XP} XP` : ''].filter(Boolean).join(' · ');
     return `<div class="cl-row"><span class="cl-lbl"><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span>
       <div class="cl-opts" role="group" aria-label="${label}">${Object.entries(CLUB_ST).map(([s, l]) => `<button class="cl-o ${s}" data-cl="${day}|${k}|${s}" aria-pressed="${v.s === s}" aria-label="${label} ${l}"><i aria-hidden="true">${CLUB_ICO[s]}</i>${l}</button>`).join('')}</div>
       ${v.s === 'missed' ? `<div class="cl-why" role="group" aria-label="Grund">${CLUB_WHY.map(([r, l]) => `<button class="cl-r" data-clr="${day}|${k}|${r}" aria-pressed="${v.r === r}">${l}</button>`).join('')}</div>` : ''}
@@ -3349,7 +3356,7 @@ const painSrcTxt = s => s === 'training' ? 'nach Training' : s === 'club' ? 'Clu
    stay = Übernachtungskosten (nur Camps). from/to leer = Datum offen (dann when = ungefähr wann, year = Jahr für die Kosten). price null = Preis offen. (Daten als JJJJ-MM-TT).
    Nur Elterninfo: im Wochenplan, im Mission Center (ohne Status) und im Bericht. Liegt in der Sicherung (alle apc.*-Schlüssel). */
 const camps = store.get('apc.camps.v1', []);
-const saveCamps = () => store.set('apc.camps.v1', camps);
+const saveCamps = () => { store.set('apc.camps.v1', camps); syncExtraXP(); };
 const CAMP_KIND = { camp:'Camp', special:'Spezialtraining' };
 /* Recovery (Sauna, Whirlpool) nur im Eltern-Bereich: apc.recov.v1 { 'JJJJ-MM-TT': { sauna:Min, whirl:Min } } (0 = nicht gemacht) */
 const recov = store.get('apc.recov.v1', {});
@@ -3358,6 +3365,58 @@ const RECOV_KIND = [['sauna', 'Sauna', 16], ['whirl', 'Whirlpool', 12]];   // [S
 const recovOn = d => recov[ymd(d)] || null;
 const recovChipsHTML = d => { const r = recovOn(d); return r ? RECOV_KIND.filter(([k]) => r[k]).map(([k, n]) => `<span class="pc recov">${n} ${r[k]} Min</span>`).join('') : ''; };
 const campsOn = d => { const k = ymd(d); return camps.filter(c => c.from && c.from <= k && k <= c.to); };
+/* Extra-Schicht (APC 1.91): Bonus-XP für Zusatztrainings.
+   - Zusatz-On-Ice (Tag ohne Eistraining in der Standardwoche), im Eltern-Bereich als «Gemacht» bestätigt
+   - gebuchte Camps und Spezialtrainings: pro Tag, sobald der Tag erreicht ist
+   Je EXTRA_XP, höchstens EXTRA_MAX pro Woche (Mo–So). Gezählt wird erst ab Einführung (progress.extraSince).
+   progress.extraXP { id: { day, xp, label } }. Der Abgleich ist idempotent: Wird eine Bestätigung zurückgenommen
+   oder ein Camp gelöscht, gehen die XP wieder weg; nichts wird doppelt gezählt.
+   Gesehene Meldungen pro Gerät in apc.xseen.v1 (nicht in der Cloud). */
+const EXTRA_XP = 50, EXTRA_MAX = 3, XSEEN_KEY = 'apc.xseen.v1';
+function extraCandidates(){
+  const out = [], today = ymd(new Date()), L = clubLog();
+  Object.keys(L).forEach(day => { const e = L[day]; if (day <= today && e.on && e.on.s === 'done' && planFor(ymdDate(day)).extra) out.push({ id:'ice|' + day, day, label:'Zusatz-Eistraining' }); });
+  camps.filter(c => c.booked && c.from && c.to && c.from <= c.to).forEach(c => {
+    for (let d = ymdDate(c.from), n = 0; ymd(d) <= c.to && ymd(d) <= today && n < 60; d = addDays(d, 1), n++)
+      out.push({ id:'camp|' + c.id + '|' + ymd(d), day:ymd(d), label:`${CAMP_KIND[c.kind]}: ${c.name || ''}`.trim() });
+  });
+  return out.sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
+}
+function syncExtraXP(){
+  const P = progress, X = P.extraXP || (P.extraXP = {});
+  let changed = false;
+  if (!P.extraSince){ P.extraSince = ymd(new Date()); changed = true; }
+  const cand = {}; extraCandidates().forEach(c => { if (c.day >= P.extraSince) cand[c.id] = c; });
+  Object.keys(X).forEach(id => { if (!cand[id]){ P.xp = Math.max(0, (P.xp || 0) - (X[id].xp || 0)); delete X[id]; changed = true; } });
+  const wk = day => ymd(monOf(ymdDate(day))), perWeek = {};
+  Object.values(X).forEach(x => { const w = wk(x.day); perWeek[w] = (perWeek[w] || 0) + 1; });
+  Object.values(cand).forEach(c => {
+    if (X[c.id]) return;
+    const w = wk(c.day); if ((perWeek[w] || 0) >= EXTRA_MAX) return;
+    perWeek[w] = (perWeek[w] || 0) + 1; X[c.id] = { day:c.day, xp:EXTRA_XP, label:c.label }; P.xp = (P.xp || 0) + EXTRA_XP; changed = true;
+  });
+  if (changed) saveProgress();
+}
+/* Meldung im Mission Center: einmal pro Gerät für neue Bonus-XP */
+function checkExtraNews(){
+  if (curScreen !== 'center') return;   // nur im Mission Center; beim nächsten Öffnen erneut
+  if (document.querySelector('.fbk') || document.getElementById('intro')){ setTimeout(checkExtraNews, 1500); return; }   // erst nach Intro und anderen Fenstern (z. B. «Was ist neu»)
+  const X = progress.extraXP || {}; let seen;
+  try { seen = JSON.parse(localStorage.getItem(XSEEN_KEY) || 'null'); } catch(e){ seen = null; }
+  if (!Array.isArray(seen)){ try { localStorage.setItem(XSEEN_KEY, JSON.stringify(Object.keys(X))); } catch(e){} return; }   // erster Start: Bestehendes nicht melden
+  const fresh = Object.keys(X).filter(id => !seen.includes(id)).map(id => X[id]).sort((a, b) => a.day < b.day ? -1 : 1);
+  try { localStorage.setItem(XSEEN_KEY, JSON.stringify(Object.keys(X))); } catch(e){}
+  if (!fresh.length) return;
+  const sum = fresh.reduce((t, x) => t + (x.xp || 0), 0);
+  const ov = document.createElement('div'); ov.className = 'fbk xtra'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-labelledby', 'xt-h');
+  ov.innerHTML = `<div class="fbk-card"><p class="eyebrow" style="color:var(--gold);margin:0">Extra-Schicht</p>
+    <h2 id="xt-h">+${sum} Bonus-XP</h2>
+    <p class="muted" style="margin:0">Für ${fresh.length === 1 ? 'dein Zusatztraining' : 'deine Zusatztrainings'} – stark, ${rpEsc(PROFILE.name)}!</p>
+    <ul class="unl-list">${fresh.map(x => `<li><b>${rpEsc(x.label)}</b><small>${fmtDate(ymdDate(x.day).toISOString())} · +${x.xp} XP</small></li>`).join('')}</ul>
+    <button class="btn btn-primary" id="xt-ok" type="button">Weiter so</button></div>`;
+  document.body.appendChild(ov);
+  $('xt-ok').onclick = () => { ov.remove(); if (curScreen === 'center') renderCenter(); };
+}
 const campDays = c => Math.round((ymdDate(c.to) - ymdDate(c.from)) / 864e5) + 1;
 const campLen = c => { const n = campDays(c); return n === 1 ? '1 Tag' : `${n} Tage`; };
 const campDate = c => {
@@ -4480,7 +4539,7 @@ function clubParentsHTML(){
       ${shown.map(day => `<div class="cl-dayblk"><p class="cl-day">${fd(day)}${clubParentsEdit === day && !clubOpen(day).length ? ' <button class="cl-link" data-cledit="">Fertig</button>' : ''}</p>${clubRowsHTML(day)}</div>`).join('')}
       ${open.length > 3 ? `<button class="cl-link" data-clall="1">${clubShowAll ? 'Weniger anzeigen' : `Weitere ${open.length - 3} Tage anzeigen`}</button>` : ''}
       ${done.length ? `<details class="cl-done"><summary>${done.length} ${done.length === 1 ? 'Tag' : 'Tage'} bestätigt</summary>
-        ${done.map(day => `<button class="cl-sum" data-cledit="${day}"><span><b>${fd(day)}</b> ${clubSumTxt(day)}</span><span class="cl-link">Ändern</span></button>`).join('')}</details>` : ''}
+        ${done.map(day => `<button class="cl-sum" data-cledit="${day}"><span><b>${fd(day)}</b> ${clubSumTxt(day)}${(progress.extraXP || {})['ice|' + day] ? ` · Extra-Schicht +${EXTRA_XP} XP` : ''}</span><span class="cl-link">Ändern</span></button>`).join('')}</details>` : ''}
     </div></div>`;
 }
 document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-clall]'); if (!t) return; clubShowAll = !clubShowAll; clubRedraw(); });
@@ -4587,7 +4646,7 @@ function renderParents(){
   const reset = $('btn-reset');
   reset.onclick = () => {
     if (reset.dataset.armed){
-      progress.xp = 0; progress.completed = 0; progress.last = null; progress.log = []; progress.badges = {}; progress.cards = []; progress.quests = {}; progress.weekBonus = {}; saveProgress(); renderParents();
+      progress.xp = 0; progress.completed = 0; progress.last = null; progress.log = []; progress.badges = {}; progress.cards = []; progress.quests = {}; progress.weekBonus = {}; progress.extraXP = {}; progress.extraSince = ymd(new Date()); saveProgress(); renderParents();
     } else { reset.dataset.armed = '1'; reset.textContent = 'Wirklich zurücksetzen? Nochmals tippen'; }
   };
   bindBackup();
@@ -7034,6 +7093,7 @@ try { Sound.setMode('calm'); if (settings.music) Sound.unlock(); } catch(e){}
 // iOS gibt Ton nur bei touchend/click frei (nicht bei pointerdown)
 ['touchend','click','keydown'].forEach(ev => document.addEventListener(ev, fixAudio, { capture:true, passive:true }));
 syncToggles();
+syncExtraXP();
 renderCenter();
 show('center');
 checkWhatsNew();
