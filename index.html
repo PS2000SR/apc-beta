@@ -881,6 +881,26 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .pc.xday{border-left-color:var(--gold)}
 .pc.recov{border-left-color:#ff8a3d;color:#ff8a3d}
 .pe-min{width:72px}
+.ct-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+.ct-day{min-height:72px;border-radius:14px;border:2px solid var(--line);background:var(--panel-2);color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-family:var(--f-display);cursor:pointer;padding:4px 2px}
+.ct-day b{font-size:1.25rem;font-weight:800}
+.ct-day small{font-size:.72rem;font-weight:700}
+.ct-day.on{background:var(--ice);border-color:var(--ice);color:var(--on-ice)}
+.ct-day.on.chg{outline:2px dashed var(--on-ice);outline-offset:-7px}
+.ct-day.gone{border-style:dashed;border-color:var(--gold);color:var(--gold)}
+.ct-rows{display:flex;flex-direction:column;gap:8px}
+.ct-row{display:flex;flex-wrap:wrap;gap:14px;align-items:center;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.ct-row>b{min-width:96px}
+.ct-t{display:flex;gap:8px;align-items:center;color:var(--muted);font-size:.9rem}
+.ct-cur{display:flex;flex-direction:column;gap:2px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:12px}
+.ct-cur span{color:var(--muted)}
+.ct-box{display:flex;flex-direction:column;gap:12px;padding:16px;border:2px solid var(--ice);border-radius:16px;background:var(--panel-2)}
+.ct-box h4{margin:0;font-family:var(--f-display);font-size:1.15rem}
+.ct-cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ct-cmp>div{padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--panel)}
+.ct-cmp>div.new{border-color:var(--ice)}
+.ct-cmp small{display:block;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.ct-notes{margin:0;padding-left:20px;color:var(--muted);font-size:.9rem}
 .pc.zt{border-left-color:var(--ice);color:var(--ice)} .pc.zt.missed{border-left-color:var(--gold);color:var(--gold)} .pc.zt.plan{border-left-style:dashed}
 .zt-box{display:flex;flex-direction:column;gap:10px;flex-basis:100%}
 .zt-item{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--ice);border-radius:12px;background:var(--panel)}
@@ -1362,9 +1382,13 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '1.93';
+const APP_VERSION = '1.94';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'1.94', date:'14.11.2026',
+    neu:['Standardwoche vereinfacht: Club-Trainingstage mit einem Tipp pro Tag festlegen (z. B. von Di, Mi, Fr auf Mo, Mi, Fr), mit Startzeit und Off-Ice.',
+         'Wechsel der Trainingstage mit «Gilt ab» (nächste Woche, ab heute oder Datum) und Vorschau. Vergangene, bestätigte und von Hand angepasste Tage bleiben unverändert.'],
+    fix:[] },
   { v:'1.93', date:'14.11.2026',
     neu:['Wochenplan unter «Heute» und im Eltern-Bereich: bestätigte Club-Trainings zeigen ✓ (gemacht), ✗ (ausgelassen) oder – (ausgefallen), wie die Zusatztrainings.'],
     fix:[] },
@@ -3602,6 +3626,64 @@ function bindZusatz(host, zday, redraw){
   const del = $('zt-del'); if (del) del.onclick = () => { if (!confirm('Dieses Zusatztraining löschen?')) return; const id = ztDraft.id; zusatz[zday] = (zusatz[zday] || []).filter(x => x.id !== id); done(); saveZusatz(); redraw(); };
 }
 
+/* ---- Eltern: Standardwoche = Club-Trainingstage (APC 1.94) ----
+   Festgelegt werden nur die Club-Tage (On-Ice mit Startzeit, Off-Ice danach) in apc.week.v1.
+   Beim Speichern werden alle angelegten Tage ab «Gilt ab» neu befüllt – ausser vergangene, von Hand angepasste
+   und bereits bestätigte Tage. Matches, Turniere, APC-Sets und Ausnahmen werden pro Datum geplant.
+   Seit wann das Muster gilt: apc.weekfrom.v1 (JJJJ-MM-TT). */
+let ctDraft = null;   // { days:{ mo:{ on, time, off } }, from:'next'|'now'|'date', date }
+const ctFromWeek = () => { const o = {}; DAYS.forEach(([k]) => { const w = week[k]; o[k] = { on:!!w.ice, time:w.iceTime || '', off:w.ice ? w.offIce !== false : true }; }); return o; };
+const ctList = days => DAYS.filter(([k]) => days[k].on).map(([, , s]) => s).join(' · ') || 'keine';
+const ctChanged = () => { const c = ctFromWeek(); return DAYS.some(([k]) => { const a = c[k], b = ctDraft.days[k]; return a.on !== b.on || (b.on && (a.time !== b.time || a.off !== b.off)); }); };
+const ctNextMon = () => addDays(monOf(new Date()), 7);
+const ctFrom = () => { const t = addDays(new Date(), 0); if (ctDraft.from === 'now') return t; if (ctDraft.from === 'date' && ctDraft.date){ const d = ymdDate(ctDraft.date); return d < t ? t : d; } return ctNextMon(); };
+const ctKeep = (key, d) => { const e = daysStore[key]; return d < addDays(new Date(), 0) || !!(e && e.edited) || Object.keys(clubLog()[key] || {}).length > 0; };   // bleibt unverändert
+function clubTageHTML(){
+  if (!ctDraft) ctDraft = { days:ctFromWeek(), from:'next', date:'' };
+  const D = ctDraft.days, cur = ctFromWeek(), changed = ctChanged(), since = store.get('apc.weekfrom.v1', '');
+  const btns = DAYS.map(([k, name, short]) => { const on = D[k].on, was = cur[k].on, tag = on && !was ? 'neu' : !on && was ? 'entfällt' : on ? 'Training' : 'frei';
+    return `<button type="button" class="ct-day${on ? ' on' : ''}${on !== was ? ' chg' : ''}${!on && was ? ' gone' : ''}" data-ctday="${k}" aria-pressed="${on}" aria-label="${name}: ${tag}"><b>${short}</b><small>${tag}</small></button>`; }).join('');
+  const rows = DAYS.filter(([k]) => D[k].on).map(([k, name]) => `<div class="ct-row"><b>${name}</b><label class="ct-t">On-Ice ab <input type="time" class="pe-time" data-cttime="${k}" value="${D[k].time}" aria-label="${name}: Beginn On-Ice"></label><label class="pe-tog"><input type="checkbox" data-ctoff="${k}" ${D[k].off ? 'checked' : ''}> Off-Ice danach</label></div>`).join('');
+  let change = '';
+  if (changed){
+    const from = ctFrom(), mon = monOf(from);
+    const prev = DAYS.map(([k, , short], i) => { const dt = addDays(mon, i), key = ymd(dt), p = planFor(dt), keep = dt < from || ctKeep(key, dt);
+      const d = keep ? p : Object.assign({}, p, { ice:D[k].on, iceTime:D[k].on ? D[k].time : '', offIce:D[k].on ? D[k].off : false, extra:false, custom:false });
+      return `<div class="pday ro"><span class="pd-name"><b>${short}</b><small>${fmtDM(dt)}</small></span><span class="pd-chips">${planChipsHTML(d, clubLog()[key], dt)}</span></div>`; }).join('');
+    change = `<div class="ct-box" role="region" aria-labelledby="ct-h"><h4 id="ct-h">Änderung speichern</h4>
+      <div class="ct-cmp"><div><small>Bisher</small><b>${ctList(cur)}</b></div><div class="new"><small>Neu</small><b>${ctList(D)}</b></div></div>
+      <span class="pe-lbl">Gilt ab</span>
+      <div class="pl-tabs" role="group" aria-label="Gilt ab">${[['next', `Nächste Woche · Mo ${fmtDM(ctNextMon())}`], ['now', 'Ab heute'], ['date', 'Datum wählen']].map(([v, l]) => `<button type="button" class="av-chip" data-ctfrom="${v}" aria-pressed="${ctDraft.from === v}">${l}</button>`).join('')}</div>
+      ${ctDraft.from === 'date' ? `<label class="ct-t">Ab <input type="date" class="pselect" id="ct-date" min="${ymd(new Date())}" value="${ctDraft.date}"></label>` : ''}
+      <span class="pe-lbl">Vorschau · ${weekTitle(mon)}</span>
+      <div class="pweek">${prev}</div>
+      <ul class="ct-notes"><li>Vergangene Tage und bestätigte Trainings bleiben unverändert.</li><li>Von Hand angepasste Tage (z. B. ein eingetragenes Match) bleiben erhalten.</li><li>Gilt für alle kommenden Wochen, bis du die Tage wieder änderst.</li></ul>
+      <div class="bk-row"><button type="button" class="btn btn-primary btn-small" id="ct-save">Speichern</button><button type="button" class="btn btn-ghost btn-small" id="ct-reset">Zurücksetzen</button></div></div>`;
+  }
+  return `<p class="muted pl-hint">An welchen Tagen ist Club-Training? Antippen zum Ein- und Ausschalten. Matches, Turniere, APC-Sets und Ausnahmen trägst du pro Datum unter «Diese Woche» oder «Nächste Woche» ein.</p>
+    <div class="ct-days" role="group" aria-label="Club-Trainingstage">${btns}</div>
+    ${rows ? `<span class="pe-lbl">Zeiten (optional)</span><div class="ct-rows">${rows}</div>` : '<p class="muted">Keine Club-Trainingstage gewählt.</p>'}
+    <div class="ct-cur"><b>Aktuell gültig</b><span>${ctList(cur)}${since ? ` · seit ${fmtDM(ymdDate(since), true)}` : ''}</span></div>
+    ${change || '<div class="bk-row"><button type="button" class="btn btn-ghost btn-small" disabled>Keine Änderung</button></div>'}`;
+}
+function bindClubTage(host, redraw){
+  host.querySelectorAll('[data-ctday]').forEach(b => b.onclick = () => { const x = ctDraft.days[b.dataset.ctday]; x.on = !x.on; redraw(); });
+  host.querySelectorAll('[data-cttime]').forEach(i => i.onchange = () => { ctDraft.days[i.dataset.cttime].time = i.value; redraw(); });
+  host.querySelectorAll('[data-ctoff]').forEach(i => i.onchange = () => { ctDraft.days[i.dataset.ctoff].off = i.checked; redraw(); });
+  host.querySelectorAll('[data-ctfrom]').forEach(b => b.onclick = () => { ctDraft.from = b.dataset.ctfrom; if (ctDraft.from === 'date' && !ctDraft.date) ctDraft.date = ymd(ctNextMon()); redraw(); });
+  const di = $('ct-date'); if (di) di.onchange = () => { if (di.value) ctDraft.date = di.value; redraw(); };
+  const rs = $('ct-reset'); if (rs) rs.onclick = () => { ctDraft = null; redraw(); };
+  const sv = $('ct-save'); if (sv) sv.onclick = () => {
+    const from = ctFrom(), D = ctDraft.days;
+    DAYS.forEach(([k]) => { const w = week[k], x = D[k]; Object.assign(w, { ice:x.on, iceTime:x.on ? x.time : '', offIce:x.on ? x.off : true, match:false, tour:false, gameTime:'', set:'' }); });   // Vorlage nur noch für Club-Tage
+    saveWeek();
+    Object.keys(daysStore).forEach(key => { const d = ymdDate(key); if (d < from || ctKeep(key, d)) return;
+      const e = daysStore[key], x = D[dayKey(d)]; e.ice = x.on; e.iceTime = x.on ? x.time : ''; e.offIce = x.on ? x.off : false; delete e.extra; });
+    saveDays(); store.set('apc.weekfrom.v1', ymd(from)); ctDraft = null; syncExtraXP(); redraw();
+    const t = $('toast'); if (t){ t.innerHTML = `<b>Club-Trainingstage gespeichert</b> · gilt ab ${fmtDM(from, true)}`; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 4500); }
+  };
+}
+
 /* ---- Eltern: Wochenplan mit echten Daten (Woche wählen) oder Standardwoche (Vorlage) ---- */
 let plannerOpen = null, plannerMon = null;   // plannerMon: Montag (Date) · 'tpl' = Standardwoche · null = Standard (diese/nächste Woche)
 const plMon = () => plannerMon === 'tpl' ? null : (plannerMon || defaultPlanMon());
@@ -3646,13 +3728,13 @@ function plannerHTML(){
   return `<section class="planner" aria-labelledby="pl-h">
     <div class="cab-head"><h3 id="pl-h">Wochenplan</h3></div>
     <div class="pl-tabs" role="group" aria-label="Woche wählen">${[['now', 'Diese Woche'], ['next', 'Nächste Woche'], ['tpl', 'Standardwoche']].map(([v, l]) => `<button class="av-chip" data-plw="${v}" aria-pressed="${sel === v}">${l}</button>`).join('')}</div>
-    ${tpl ? '<p class="muted pl-hint">Vorlage für neue Wochen. Änderungen gelten für Wochen, die noch nicht angelegt sind; mit «Ab nächster Woche übernehmen» auch für die kommenden Wochen. Vergangene Tage bleiben unverändert.</p>'
+    ${tpl ? clubTageHTML() : `${tpl ? '<p class="muted pl-hint">Vorlage für neue Wochen. Änderungen gelten für Wochen, die noch nicht angelegt sind; mit «Ab nächster Woche übernehmen» auch für die kommenden Wochen. Vergangene Tage bleiben unverändert.</p>'
       : `<div class="pl-nav"><button class="btn btn-ghost btn-small" data-plnav="-1" aria-label="Vorherige Woche">‹</button><b>${weekTitle(mon)}</b><button class="btn btn-ghost btn-small" data-plnav="1" aria-label="Nächste Woche">›</button></div>
          <p class="muted pl-hint">Tippe auf einen Tag, um On-Ice, Off-Ice, Matches, Turniere und APC-Sets für dieses Datum einzutragen. Die Standardwoche bleibt dabei unverändert.</p>`}
     <div class="pweek">${cells}</div>
     ${editor}
     <div class="bk-row"><button class="btn btn-ghost btn-small" id="btn-suggest">Vorschlag erstellen</button>${tpl ? '<button class="btn btn-ghost btn-small" id="btn-tpl-apply">Ab nächster Woche übernehmen</button>' : '<button class="btn btn-ghost btn-small" id="btn-wk-reset">Woche wie Standardwoche</button>'}</div>
-    ${warn.length ? `<ul class="pwarn">${warn.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}
+    ${warn.length ? `<ul class="pwarn">${warn.map(w => `<li>${w}</li>`).join('')}</ul>` : ''}`}
   </section>`;
 }
 /* Wochenplan nur zur Ansicht (Mission Center); bearbeitet wird er im Eltern-Bereich */
@@ -3672,7 +3754,8 @@ function bindPlanner(){
   const host = document.querySelector('#screen-parents .planner'); if (!host) return;
   const redraw = () => { const sc = $('screen-parents'), y = sc.scrollTop; renderParents(); sc.scrollTop = y; };
   const mon = plMon(), tpl = !mon, W = tpl ? week : weekObj(mon), save = tpl ? saveWeek : saveDays;
-  host.querySelectorAll('[data-plw]').forEach(b => b.onclick = () => { const v = b.dataset.plw; plannerMon = v === 'tpl' ? 'tpl' : addDays(monOf(new Date()), v === 'next' ? 7 : 0); plannerOpen = null; if (v !== 'tpl') markPlanSeen(plannerMon); redraw(); });
+  host.querySelectorAll('[data-plw]').forEach(b => b.onclick = () => { const v = b.dataset.plw; plannerMon = v === 'tpl' ? 'tpl' : addDays(monOf(new Date()), v === 'next' ? 7 : 0); plannerOpen = null; ctDraft = null; if (v !== 'tpl') markPlanSeen(plannerMon); redraw(); });
+  if (tpl){ bindClubTage(host, redraw); return; }   // Standardwoche = Club-Trainingstage (APC 1.94)
   host.querySelectorAll('[data-plnav]').forEach(b => b.onclick = () => { plannerMon = addDays(mon, 7 * +b.dataset.plnav); plannerOpen = null; markPlanSeen(plannerMon); redraw(); });
   host.querySelectorAll('[data-day]').forEach(b => b.onclick = () => { plannerOpen = plannerOpen === b.dataset.day ? null : b.dataset.day; if (!tpl) markPlanSeen(mon); redraw(); });
   $('btn-suggest').onclick = () => { suggestWeek(W, save); redraw(); };
