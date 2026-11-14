@@ -1212,6 +1212,7 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
 .rp-notes textarea{width:100%;box-sizing:border-box;border:1px solid var(--l);border-radius:6px;padding:10px;font:inherit;color:#2B3440;background:#fff;resize:vertical;min-height:80px}
 .rp-note-print{min-height:70px;border:1px solid var(--l);border-radius:6px;padding:10px;white-space:pre-wrap;
   background-image:repeating-linear-gradient(transparent 0 23px,var(--l) 23px 24px)}
+.app-ver{text-align:center;font-size:12px;letter-spacing:.08em;color:var(--silver);opacity:.7;margin:18px 0 6px}
 .rp-foot{border-top:1px solid var(--l);padding-top:8px;font-size:11px;color:var(--g)}
 @media (max-width:640px){
   .rp-paper{padding:0 16px 18px}.rp-top{margin:0 -16px 14px;padding:10px 16px}
@@ -1272,7 +1273,7 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
 })();</script>
 <div id="app" lang="de">
   <header class="topbar">
-    <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><b>APC 1.6</b><span>Family Edition</span></div>
+    <div class="brand"><div class="mark" aria-hidden="true"><i></i><i></i><i></i></div><b>APC 1.7</b><span>Family Edition</span></div>
     <div class="toggles" role="group" aria-label="Navigation und Ton">
       <button class="tog" id="btn-home" hidden aria-label="Zum Mission Center"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11 L12 3 L21 11 M6 9 V21 H18 V9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="lbl">Mission Center</span></button>
       <button class="tog" id="tog-music" aria-pressed="false" hidden>Musik</button>
@@ -1338,6 +1339,10 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
 /* =====================================================================
    1. INHALTE – zentral änderbar. Missionen sind reine Daten.
    ===================================================================== */
+/* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
+   Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
+const APP_VERSION = '1.7';
+const APP_LABEL = 'APC ' + APP_VERSION + (/\/apc-beta\//.test(location.pathname) ? ' Beta' : '');
 const PROFILE = (() => {   // Name wird nur lokal auf dem Gerät gespeichert, nicht im Code
   let n = ''; try { n = localStorage.getItem('apc.name') || ''; } catch(e){}
   if (!n){ n = ((window.prompt && prompt('Wie heisst du? (Name für die App)')) || '').trim().slice(0, 20) || 'Champ';
@@ -4543,6 +4548,7 @@ function renderParents(){
       </div>
       <p id="bk-msg" aria-live="polite"></p>
     </div></div>
+    <p class="app-ver">${APP_LABEL}</p>
   </div>`;
   if (window.APCSync) window.APCSync.mount($('sync-box')); else { const sb = $('sync-box'); if (sb) sb.parentNode.remove(); }
   bindPlanner();
@@ -4920,7 +4926,7 @@ function reportPaperHTML(D){
     </div>
     <section class="rp-sec rp-notes"><h2>Notizen der Eltern</h2>
       <textarea id="rp-note" rows="4" placeholder="Eigene Beobachtungen, Ziele für die nächste Zeit, Rückmeldung vom Trainer …">${rpEsc(reportState.note)}</textarea></section>
-    <footer class="rp-foot">Erstellt am ${rpDate(new Date())} mit APC · Alle Daten stammen nur von diesem Gerät.</footer>
+    <footer class="rp-foot">Erstellt am ${rpDate(new Date())} mit APC ${APP_VERSION} · Alle Daten stammen nur von diesem Gerät.</footer>
   </article>`;
 }
 
@@ -5198,7 +5204,7 @@ async function buildReportPDF(D){
     for (let t = y + 22; t < y + h - 4; t += 14) line(M + 8, t, M + CW - 8, t, C.grid);
     L.forEach((l, i) => txt(l, M + 10, y + 10 + i * 14, 9.5)); y += h; }
   // Fusszeile auf jeder Seite
-  const pages = doc.getPages(), stamp = `Erstellt am ${rpDate(new Date())} mit APC · Alle Daten stammen nur von diesem Gerät.`;
+  const pages = doc.getPages(), stamp = `Erstellt am ${rpDate(new Date())} mit APC ${APP_VERSION} · Alle Daten stammen nur von diesem Gerät.`;
   pages.forEach((p, i) => { page = p; line(M, H - 34, W - M, H - 34, C.line); txt(stamp, M, H - 28, 7.2, { color:C.grey }); txt(`Seite ${i + 1} von ${pages.length}`, W - M, H - 28, 7.2, { align:'right', color:C.grey }); });
   return doc.save();
 }
@@ -5244,7 +5250,7 @@ const Backup = (() => {
       const all = await musicTx('readonly', st => st.getAll()).catch(() => []);
       for (const r of (all || [])) music.push({ id:r.id, name:r.name, added:r.added, data:await blobToDataURL(r.blob) });
     }
-    return { format:FORMAT, version:VERSION, created:new Date().toISOString(), player:PROFILE.name, data, music };
+    return { format:FORMAT, version:VERSION, appVersion:APP_VERSION, created:new Date().toISOString(), player:PROFILE.name, data, music };
   }
   async function restore(b){
     if (!b || b.format !== FORMAT || typeof b.data !== 'object') throw new Error('Das ist keine APC-Sicherung.');
