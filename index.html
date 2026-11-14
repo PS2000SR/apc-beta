@@ -521,6 +521,7 @@ html[data-theme="light"] .player-card,html[data-theme="light"] .pc-name{color:#0
 .pc{font-size:.74rem;font-weight:700;line-height:1.2;padding:3px 6px;border-radius:5px;overflow-wrap:anywhere;border-left:3px solid var(--line);background:var(--panel)}
 .pc.ice{border-left-color:var(--ice)}
 .pc.game{border-left-color:var(--red);color:var(--text)}
+.pc.ice.missed,.pc.game.missed{border-left-color:var(--gold);color:var(--gold)}
 .pc.apc{border-left-color:var(--gold)}
 .pc.apc.load-b-hoch{border-left-color:var(--red)} .pc.apc.load-b-mittel{border-left-color:var(--gold)} .pc.apc.load-b-niedrig{border-left-color:var(--ok)}
 .pc.rest{color:var(--muted);background:transparent}
@@ -1361,9 +1362,12 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '1.92';
+const APP_VERSION = '1.93';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'1.93', date:'14.11.2026',
+    neu:['Wochenplan unter «Heute» und im Eltern-Bereich: bestätigte Club-Trainings zeigen ✓ (gemacht), ✗ (ausgelassen) oder – (ausgefallen), wie die Zusatztrainings.'],
+    fix:[] },
   { v:'1.92', date:'14.11.2026',
     neu:['Wochenplan: Zusatztrainings ausserhalb des Clubs erfassen, z. B. synthetisches Eis in der Garage (Art, Ort, Dauer, Notiz, Status).',
          'Gemachte Zusatztrainings geben +50 Bonus-XP (Extra-Schicht, höchstens 3 pro Woche).',
@@ -3467,12 +3471,13 @@ const campTotal = c => noPrice(c) && !campStay(c) ? 'Preis offen' : (c.estimate 
 /* Chips für einen Tag; mit Protokoll e werden ✓ (gemacht), ✗ (ausgelassen) und – (ausgefallen) angehängt */
 function planChipsHTML(d, e, dt){
   const mk = k => !e || !e[k] ? '' : e[k].s === 'done' ? ' ✓' : e[k].s === 'missed' ? ' ✗' : ' –';
+  const ms = k => e && e[k] && e[k].s === 'missed' ? ' missed' : '';   // ausgelassen: gelb markiert wie bei den Zusatztrainings
   const m = SETS.find(x => x.id === d.set);
   return [
-    d.ice ? `<span class="pc ice">On-Ice${d.iceTime ? ' ' + d.iceTime : ''}${mk('on')}</span>` : '',
-    d.ice && d.offIce ? `<span class="pc ice">Off-Ice${mk('off')}</span>` : '',
-    d.match ? `<span class="pc game">Match${d.gameTime ? ' ' + d.gameTime : ''}${mk('game')}</span>` : '',
-    d.tour ? `<span class="pc game">Turnier${d.gameTime && !d.match ? ' ' + d.gameTime : ''}${d.match ? '' : mk('game')}</span>` : '',
+    d.ice ? `<span class="pc ice${ms('on')}">On-Ice${d.iceTime ? ' ' + d.iceTime : ''}${mk('on')}</span>` : '',
+    d.ice && d.offIce ? `<span class="pc ice${ms('off')}">Off-Ice${mk('off')}</span>` : '',
+    d.match ? `<span class="pc game${ms('game')}">Match${d.gameTime ? ' ' + d.gameTime : ''}${mk('game')}</span>` : '',
+    d.tour ? `<span class="pc game${d.match ? '' : ms('game')}">Turnier${d.gameTime && !d.match ? ' ' + d.gameTime : ''}${d.match ? '' : mk('game')}</span>` : '',
     m ? `<span class="pc apc load-b-${m.load}">Set ${m.n} · ${m.title}</span>` : '',
     d.extra ? '<span class="pc xday">Zusatztraining</span>' : '',
     dt ? recovChipsHTML(dt) : '',
@@ -3609,7 +3614,7 @@ function plannerHTML(){
     const dt = tpl ? null : addDays(mon, i), isToday = !!dt && dt.getTime() === t0;
     const d = tpl ? week[k] : Object.assign({}, W[k], { custom:isCustom(W[k]) });
     return `<button class="pday${isToday ? ' today' : ''}${dt && dt.getTime() < t0 ? ' past' : ''}${plannerOpen === k ? ' open' : ''}" data-day="${k}" aria-pressed="${plannerOpen === k}">
-      <span class="pd-name"><b>${short}</b><small>${tpl ? name : isToday ? 'Heute' : fmtDM(dt, true)}</small></span><span class="pd-chips">${planChipsHTML(d, null, dt)}</span></button>`;
+      <span class="pd-name"><b>${short}</b><small>${tpl ? name : isToday ? 'Heute' : fmtDM(dt, true)}</small></span><span class="pd-chips">${planChipsHTML(d, dt ? clubLog()[ymd(dt)] : null, dt)}</span></button>`;
   }).join('');
   let editor = '';
   if (plannerOpen){
@@ -3655,7 +3660,7 @@ let mcWeekNext = false;
 function weekViewHTML(){
   const t0 = addDays(new Date(), 0).getTime(), mon = addDays(monOf(new Date()), mcWeekNext ? 7 : 0);
   const cells = DAYS.map(([k, name, short], i) => {
-    const dt = addDays(mon, i), isToday = dt.getTime() === t0, chips = planChipsHTML(planFor(dt), null, dt);   // Club-Termine nur zur Info, bestätigt wird im Eltern-Bereich
+    const dt = addDays(mon, i), isToday = dt.getTime() === t0, chips = planChipsHTML(planFor(dt), clubLog()[ymd(dt)], dt);   // Club-Termine mit Status nur zur Ansicht (✓ ✗ –), bestätigt wird im Eltern-Bereich
     return `<div class="pday ro${isToday ? ' today' : ''}"><span class="pd-name"><b>${short}</b><small>${isToday ? 'Heute' : fmtDM(dt)}</small></span><span class="pd-chips">${chips}</span></div>`;
   }).join('');
   return `<section class="planner mc2-week" aria-labelledby="wk-h"><div class="cab-head"><h3 id="wk-h">${mcWeekNext ? 'Nächste Woche' : 'Wochenplan'}</h3>
