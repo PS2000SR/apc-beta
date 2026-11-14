@@ -1349,9 +1349,14 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '1.8';
+const APP_VERSION = '1.9';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'1.9', date:'14.11.2026',
+    neu:['Eigenes Login pro Familie: Registrierung mit Vorname, Name und E-Mail.',
+         'Neue Familien werden nach der Registrierung freigeschaltet; erst dann öffnet sich die APC.',
+         'Die APC öffnet sich nur noch mit einem freigeschalteten Login.'],
+    fix:[] },
   { v:'1.8', date:'14.11.2026',
     neu:['Nach jedem Update zeigt die APC einmal, was neu ist.',
          'Im Eltern-Bereich: alle Versionen mit Neuerungen und Fehlerbehebungen (Versionsnummer unten antippen).'],
