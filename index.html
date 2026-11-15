@@ -4947,7 +4947,7 @@ function clubParentsHTML(){
   const open = days.filter(d => clubOpen(d).length || clubParentsEdit === d), done = days.filter(d => !open.includes(d));
   const shown = clubShowAll ? open : open.slice(0, 3);
   return `<div class="parents"><div class="pbox clc">
-      <div class="clc-head"><p class="eyebrow">Club-Trainings bestätigen</p><span class="muted">${open.length ? `${open.filter(d => clubOpen(d).length).length} offen` : 'Alles bestätigt ✓'} · letzte 14 Tage</span></div>
+      <div class="clc-head"><p class="eyebrow">Club-Trainings, Matches und Turniere bestätigen</p><span class="muted">${open.length ? `${open.filter(d => clubOpen(d).length).length} offen` : 'Alles bestätigt ✓'} · letzte 14 Tage</span></div>
       ${!days.length ? '<p class="muted">Kein Club-Training geplant.</p>' : ''}
       ${shown.map(day => `<div class="cl-dayblk"><p class="cl-day">${fd(day)}${clubParentsEdit === day && !clubOpen(day).length ? ' <button class="cl-link" data-cledit="">Fertig</button>' : ''}</p>${clubRowsHTML(day)}</div>`).join('')}
       ${open.length > 3 ? `<button class="cl-link" data-clall="1">${clubShowAll ? 'Weniger anzeigen' : `Weitere ${open.length - 3} Tage anzeigen`}</button>` : ''}
@@ -7549,7 +7549,7 @@ const Demo = (() => {
     ['Belohnungen: NHL-Profikarten und Abzeichen.', () => openTrophies()],
     ['Analytics: Belastung, Spass und Schmerzen ausgewertet.', () => { openAnalytics(); later(() => { const sc = $('screen-analytics'); if (sc) sc.scrollTo({ top:520, behavior:'smooth' }); }, 1200); }],
     [`Rekorde und Testtag zeigen, wie ${PROFILE.name} besser wird.`, () => openRecords()],
-    ['Eltern-Bereich: Club-Trainings bestätigen. Das Mission Center bleibt rein für APC.', () => { openParents(); hl('.clc'); }],
+    ['Eltern-Bereich: Club-Trainings, Matches und Turniere bestätigen. Das Mission Center bleibt rein für APC.', () => { openParents(); hl('.clc'); }],
     ['Wochenplan mit echten Daten, Eistraining und Matches, auch für die Folgewoche.', () => hl('#screen-parents .planner')],
     ['Camps und Spezialtrainings: gebucht oder noch offen, mit Details und Kostentotal pro Jahr.', () => openCamps()],
     ['Bericht: APC- und Club-Trainings, Camps, Feedback und Schmerzen, als PDF zum Herunterladen.', () => openReport()]
