@@ -18,7 +18,7 @@
   var SP = Storage.prototype, rawGet = SP.getItem, rawSet = SP.setItem, rawRem = SP.removeItem;
   var META = 'apc.sync.v1';
   var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg.', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.'];   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
-  var MERGE = { 'apc.progress.v1':mergeProgress, 'apc.komm.v1':mergeKomm };
+  var MERGE = { 'apc.progress.v1':mergeProgress, 'apc.komm.v1':mergeKomm, 'apc.games.v1':mergeKomm };   // Kommentare und Matchstatistik: pro Eintrag der neuere Stand
   var syncable = function(k){ k = String(k); return k.indexOf('apc.') === 0 && !SKIP.some(function(p){ return k.indexOf(p) === 0; }); };
   var enabled = !!(CFG.url && CFG.key);
 
@@ -136,7 +136,7 @@
   }
   // Die App hält ihre Daten im Arbeitsspeicher. Neue Daten vom anderen Gerät werden darum mit einem
   // Neuladen übernommen – aber nur auf ruhigen Seiten, nie mitten in einer Mission oder einem Formular.
-  var SAFE = ['center', 'progress', 'analytics', 'missions', 'records', 'trophies', 'season', 'log', 'card'];
+  var SAFE = ['center', 'progress', 'analytics', 'missions', 'records', 'trophies', 'season', 'log', 'card', 'games'];
   function maybeReload(){
     if (!needReload) return;
     var s = window.APC_screen;
@@ -158,7 +158,7 @@
     return out;
   }
 
-  // Kommentare (APC 1.95): pro Eintrag gilt der neuere Stand (auch Löschen, dann mit leerem Text)
+  // Kommentare (APC 1.95) und Matchstatistik (APC 2.0): pro Eintrag gilt der neuere Stand (Feld «at»)
   function mergeKomm(a, b){
     a = a || {}; b = b || {}; var out = {};
     Object.keys(Object.assign({}, b, a)).forEach(function(k){ var x = a[k], y = b[k];

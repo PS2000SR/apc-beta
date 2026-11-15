@@ -10,7 +10,7 @@ Testversion der APC. Änderungen werden hier zuerst getestet und erst danach in 
 
 - `sync.js`: gleicht die Speicherblöcke `apc.*` über das Familien-Login mit der Tabelle `public.kv` ab. Nicht in die Cloud: eigene Bilder, Coach-Aufnahmen, Name, Darstellung, Musik.
 - Oben in `sync.js` stehen nur die öffentlichen Angaben (Projekt-Adresse und publishable/anon key). Der geheime Schlüssel gehört nie ins Repository.
-- Zusammenführen, wenn beide Geräte gleichzeitig gespeichert haben: `apc.progress.v1` (Trainings, Tests, Rekorde) und ab APC 1.95 `apc.komm.v1` (Kommentare, pro Eintrag gilt der neuere Stand).
+- Zusammenführen, wenn beide Geräte gleichzeitig gespeichert haben: `apc.progress.v1` (Trainings, Tests, Rekorde) ab APC 1.95 `apc.komm.v1` (Kommentare) und ab APC 2.0 `apc.games.v1` (Matchstatistik: Tore, Assists, Strafen pro Tag); bei beiden gilt pro Eintrag der neuere Stand.
 - `supabase/01_kv.sql`: Tabelle, Row Level Security und Freigaben. Einmal im SQL Editor des Supabase-Projekts ausführen.
 
 ## Login pro Familie und Freigabe (ab APC 1.9)

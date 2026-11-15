@@ -896,6 +896,38 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .km-f textarea{width:100%;min-height:110px;resize:vertical;font:inherit;line-height:1.4}
 .km-n{margin:-6px 0 0;font-size:.8rem;text-align:right}
 .km-acts{justify-content:flex-end}
+/* Matchstatistik (APC 2.0) */
+.gm-cnt{grid-column:2;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:8px 10px;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:12px;background:var(--panel-2)}
+.gm-c{display:flex;align-items:center;gap:8px}
+.gm-l{font:700 .82rem var(--f-display);text-transform:uppercase;letter-spacing:.05em;color:var(--muted);min-width:5.6em}
+.gm-btns{display:inline-flex;align-items:center;gap:6px}
+.gm-btns b{min-width:1.6em;text-align:center;font:800 1.35rem var(--f-display);font-variant-numeric:tabular-nums}
+.gm-b{width:44px;height:40px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:var(--text);font:700 1.3rem var(--f-body);line-height:1;cursor:pointer}
+.gm-b:disabled{opacity:.35;cursor:default}
+.gm-c:not(.pen) .gm-b[data-gm$="|1"]{border-color:var(--gold);color:var(--gold)}
+.gm-sum{margin-left:auto;color:var(--gold);font-weight:700;font-size:.85rem}
+.gm-season{margin:0;color:var(--text);font-weight:600}
+.gm-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.gm-kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 10px;display:flex;flex-direction:column;gap:2px;text-align:center}
+.gm-kpi b{font:800 1.9rem/1 var(--f-display);font-variant-numeric:tabular-nums}
+.gm-kpi small{color:var(--muted);font-size:.78rem}
+.gm-kpi.hi{border-color:var(--gold)}.gm-kpi.hi b{color:var(--gold)}
+.gm-kpi.pen b{color:var(--muted)}
+.gm-chart svg{width:100%;height:auto;display:block}
+.gm-cap{margin:6px 0 0;font-size:.82rem}
+.gm-best{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gm-bv{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.gm-bv small{color:var(--muted);font-size:.8rem}.gm-bv b{font:800 1.7rem/1.1 var(--f-display);color:var(--gold)}.gm-bv span{font-size:.82rem;color:var(--muted)}
+.gm-tab{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.gm-tab th{font-size:.78rem;color:var(--muted);text-align:left;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--line)}
+.gm-tab td{padding:8px;border-bottom:1px solid var(--line)}.gm-tab td small{display:block;color:var(--muted);font-size:.75rem}
+.gm-tab .r{text-align:right}.gm-tab tr.best td{background:rgba(244,198,78,.10)}
+.gm-badges{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.gm-bd{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px}
+.gm-bd svg{width:64px;height:auto}.gm-bd b{font-size:.82rem;line-height:1.15}.gm-bd small{color:var(--muted);font-size:.75rem}
+.gm-bd:not(.on){opacity:.7}
+@media (max-width:700px){.gm-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}.gm-badges{grid-template-columns:repeat(3,minmax(0,1fr))}.gm-best{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:560px){.gm-cnt{grid-column:1/-1}.gm-sum{margin-left:0;flex-basis:100%}}
 @media (max-width:560px){   /* schmal: Notiz-Symbol neben die Bezeichnung, damit die drei Status-Knöpfe die volle Breite behalten */
   .cl-act{display:contents}.cl-row .km-b{grid-column:2;grid-row:1;min-height:32px;min-width:40px}
   .cl-act .cl-opts{grid-column:1/-1}}
@@ -1369,6 +1401,7 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
     <section id="screen-analytics" class="screen" hidden></section>
     <section id="screen-report" class="screen" hidden></section>
     <section id="screen-camps" class="screen" hidden></section>
+    <section id="screen-games" class="screen" hidden></section>
     <section id="screen-setup" class="screen" hidden></section>
     <section id="screen-player" class="screen" hidden>
       <div class="ptop">
@@ -1410,9 +1443,15 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '1.95';
+const APP_VERSION = '2.0';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.0', date:'15.11.2026',
+    neu:['Matchstatistik: Bei einem bestätigten Match tragen die Eltern Tore, Assists und Strafen mit Plus und Minus ein.',
+         'Tore und Assists geben XP: +20 pro Tor, +15 pro Assist, höchstens 100 pro Match. Strafen sind nur eine Information.',
+         'Neu unter Fortschritt: «Matches» mit Club-Saison, Punktekurve, Bestwerten, letzten Matches und eigenen Abzeichen (erstes Tor, erster Assist, Hattrick, 10, 25 und 50 Saisonpunkte).',
+         'Bericht und PDF: Matches mit Toren, Assists, Punkten und Strafen.'],
+    fix:[] },
   { v:'1.95', date:'15.11.2026',
     neu:['Eltern-Bereich: freiwilliger Kommentar zu Club-Trainings, Matches, Zusatztrainings, Camps und Spezialtrainings – über das Notiz-Symbol neben der Bestätigung. Auch bei Trainings, die noch offen sind.',
          'Kommentare stehen im Bericht und im PDF und werden mit der Cloud abgeglichen. Unter «Heute» sind sie nicht sichtbar.'],
@@ -1526,6 +1565,12 @@ const BADGES = [
   { id:'m25',       name:'Assistenzkapitän',        tier:'silver', glyph:'#25',   desc:'25 Missionen abgeschlossen.',                                    rule:{ type:'missions', n:25 } },
   { id:'cardsAll',  name:'Komplettes Album',        tier:'gold',   glyph:'cards', desc:'Alle Profikarten gesammelt.',                                    rule:{ type:'cards', n:PROS.length } },
   { id:'weeks4',    name:'Saisonform',              tier:'gold',   glyph:'trend', desc:'4 Wochen in Folge mit je mindestens 2 Trainings.',               rule:{ type:'weekStreak', n:4 } },
+  { id:'goal1',     name:'Erstes Tor',              tier:'bronze', glyph:'puck',  desc:'Erstes Tor in einem Club-Match.',                                rule:{ type:'goals', n:1 } },
+  { id:'assist1',   name:'Vorlagengeber',           tier:'bronze', glyph:'trend2',desc:'Erster Assist in einem Club-Match.',                             rule:{ type:'assists', n:1 } },
+  { id:'pts10',     name:'Skorer',                  tier:'bronze', glyph:'#10P',  desc:'10 Punkte (Tore + Assists) in einer Club-Saison.',               rule:{ type:'seasonPts', n:10 } },
+  { id:'hattrick',  name:'Hattrick',                tier:'silver', glyph:'#3T',   desc:'3 Tore in einem Club-Match.',                                    rule:{ type:'hattrick', n:3 } },
+  { id:'pts25',     name:'Topskorer',               tier:'silver', glyph:'#25P',  desc:'25 Punkte (Tore + Assists) in einer Club-Saison.',               rule:{ type:'seasonPts', n:25 } },
+  { id:'pts50',     name:'Punktemaschine',          tier:'gold',   glyph:'#50P',  desc:'50 Punkte (Tore + Assists) in einer Club-Saison.',               rule:{ type:'seasonPts', n:50 } },
   { id:'m50',       name:'Captain',                 tier:'gold',   glyph:'#50',   desc:'50 Missionen abgeschlossen.',                                    rule:{ type:'missions', n:50 } }
 ];
 
@@ -3302,14 +3347,14 @@ function faceoffSVG(){
     <line class="fo-hash" x1="78" y1="182" x2="78" y2="196"/><line class="fo-hash" x1="122" y1="182" x2="122" y2="196"/>
     <circle class="fo-dot" cx="100" cy="100" r="6"/></svg>`;
 }
-const MUSIC_SCREENS = new Set(['center','missions','briefing','progress','parents','log','card','avatar','trophies','records','season','music','report','camps']);
+const MUSIC_SCREENS = new Set(['center','missions','briefing','progress','parents','log','card','avatar','trophies','records','season','music','report','camps','games']);
 let curScreen = 'center';
 function show(name){
   if (name !== 'avatar') closeAvatar3D();
   if (name !== 'card') closeCard3D();
-  ['center','briefing','trophies','missions','music','records','test','card','avatar','season','setup','player','progress','parents','log','analytics','report','camps'].forEach(n => { $('screen-' + n).hidden = (n !== name); });
+  ['center','briefing','trophies','missions','music','records','test','card','avatar','season','setup','player','progress','parents','log','analytics','report','camps','games'].forEach(n => { $('screen-' + n).hidden = (n !== name); });
   window.APC_screen = name;   // für den Cloud-Abgleich: neue Daten nur auf ruhigen Seiten übernehmen
-  { const tab = { center:'heute', music:'eltern', missions:'trainings', briefing:'trainings', setup:'trainings', progress:'fortschritt', card:'fortschritt', avatar:'fortschritt', trophies:'fortschritt', records:'fortschritt', test:'fortschritt', season:'fortschritt', log:'fortschritt', analytics:'fortschritt', parents:'eltern', report:'eltern', camps:'eltern' }[name];
+  { const tab = { center:'heute', music:'eltern', missions:'trainings', briefing:'trainings', setup:'trainings', progress:'fortschritt', card:'fortschritt', avatar:'fortschritt', trophies:'fortschritt', records:'fortschritt', test:'fortschritt', season:'fortschritt', log:'fortschritt', analytics:'fortschritt', parents:'eltern', report:'eltern', camps:'eltern', games:'fortschritt' }[name];
     document.querySelectorAll('#tabbar [data-tab]').forEach(b => { if (b.dataset.tab === tab) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); }); }
   $('btn-home').hidden = (name === 'center');
   $('tog-theme').hidden = (name !== 'center');
@@ -3396,6 +3441,7 @@ function setClub(day, k, s, r){
   if (!Object.keys(e).length) delete L[day];
   saveProgress();
   syncExtraXP();
+  syncGameXP();
 }
 /* Offen = geplant, aber noch nicht bestätigt (oder ausgelassen ohne Grund) */
 const clubOpen = day => { const e = clubLog()[day] || {}; return clubItems(planFor(ymdDate(day))).filter(([k]) => !e[k] || (e[k].s === 'missed' && !e[k].r)); };
@@ -3406,6 +3452,7 @@ function clubRowsHTML(day){
     return `<div class="cl-row"><span class="cl-lbl"><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span>
       <div class="cl-act"><div class="cl-opts" role="group" aria-label="${label}">${Object.entries(CLUB_ST).map(([s, l]) => `<button class="cl-o ${s}" data-cl="${day}|${k}|${s}" aria-pressed="${v.s === s}" aria-label="${label} ${l}"><i aria-hidden="true">${CLUB_ICO[s]}</i>${l}</button>`).join('')}</div>${kommBtnHTML(kk, `${label} · ${dl}`)}</div>
       ${v.s === 'missed' ? `<div class="cl-why" role="group" aria-label="Grund">${CLUB_WHY.map(([r, l]) => `<button class="cl-r" data-clr="${day}|${k}|${r}" aria-pressed="${v.r === r}">${l}</button>`).join('')}</div>` : ''}
+      ${k === 'game' && v.s === 'done' ? gameCountersHTML(day) : ''}
       ${kommGet(kk) ? `<div class="cl-km">${kommTxtHTML(kk)}</div>` : ''}
     </div>`; }).join('');
 }
@@ -3420,6 +3467,7 @@ document.addEventListener('click', e => {
   if (t.dataset.cl){
     const [day, k, s] = t.dataset.cl.split('|'), cur = (clubLog()[day] || {})[k];
     setClub(day, k, cur && cur.s === s ? '' : s);
+    if (k === 'game' && s === 'done' && !(cur && cur.s === s) && curScreen === 'parents') clubParentsEdit = day;   // Tag offen lassen, damit Tore und Assists gleich erfasst werden können
     clubRedraw(); return;
   }
   const [day, k, r] = t.dataset.clr.split('|'), cur = (clubLog()[day] || {})[k];
@@ -3500,6 +3548,74 @@ function openKomm(k, label){
   ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
 }
 document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-komm]'); if (!b) return; e.preventDefault(); e.stopPropagation(); openKomm(b.dataset.komm, b.dataset.kommL || 'Eintrag'); });
+
+/* ---- Matchstatistik (APC 2.0) ----
+   apc.games.v1 { 'JJJJ-MM-TT': { g:Tore, a:Assists, p:Strafen, at:ISO } } – ein Club-Match (oder Turnier) pro Tag.
+   Zählt nur, wenn das Match im Eltern-Bereich als «Gemacht» bestätigt ist; die Zähler erscheinen erst dann.
+   XP: +20 pro Tor, +15 pro Assist, höchstens 100 pro Match. progress.gameXP { day:xp } – der Abgleich ist idempotent,
+   Korrekturen passen die XP an. Strafen: nur Information (keine XP, keine Abzeichen).
+   Club-Saison: 1. August bis 31. Juli (z. B. 2026/27). Cloud-Abgleich pro Tag, der neuere Stand gilt. */
+const GAMES_KEY = 'apc.games.v1', GOAL_XP = 20, ASSIST_XP = 15, GAME_XP_MAX = 100;
+let gamesMem = null;
+function gamesStore(){ if (!gamesMem){ try { gamesMem = JSON.parse(localStorage.getItem(GAMES_KEY) || '{}') || {}; } catch(e){ gamesMem = {}; } } return gamesMem; }
+const gameStat = day => { const x = gamesStore()[day] || {}; return { g:x.g || 0, a:x.a || 0, p:x.p || 0 }; };
+const gameDone = day => { const v = (clubLog()[day] || {}).game; return !!v && v.s === 'done'; };
+const gameXPof = x => Math.min(GAME_XP_MAX, x.g * GOAL_XP + x.a * ASSIST_XP);
+const gameSeason = day => { const [y, m] = day.split('-').map(Number); return m >= 8 ? y : y - 1; };
+const seasonLbl = y => `${y}/${String((y + 1) % 100).padStart(2, '0')}`;
+const curSeason = () => gameSeason(ymd(new Date()));
+/* Alle bestätigten Matches, nach Datum: [{ day, g, a, p, pts, kind }] */
+function gameList(season){
+  const L = clubLog();
+  return Object.keys(L).filter(day => L[day].game && L[day].game.s === 'done' && (season === undefined || gameSeason(day) === season)).sort()
+    .map(day => { const x = gameStat(day), pl = planFor(ymdDate(day)); return Object.assign({ day, pts:x.g + x.a, kind:pl.match ? 'Match' : pl.tour ? 'Turnier' : 'Match' }, x); });
+}
+function gameTotals(L){
+  const t = L.reduce((s, x) => ({ n:s.n + 1, g:s.g + x.g, a:s.a + x.a, p:s.p + x.p }), { n:0, g:0, a:0, p:0 });
+  t.pts = t.g + t.a; t.ppg = t.n ? t.pts / t.n : 0;
+  let run = 0; t.streak = 0; L.forEach(x => { run = x.pts ? run + 1 : 0; t.streak = Math.max(t.streak, run); });
+  t.best = L.reduce((b, x) => !b || x.pts > b.pts ? x : b, null); if (t.best && !t.best.pts) t.best = null;
+  t.bestG = L.reduce((b, x) => !b || x.g > b.g ? x : b, null); if (t.bestG && !t.bestG.g) t.bestG = null;
+  return t;
+}
+/* Werte für die Abzeichen (stats() → badgeProgress) */
+function gameBadgeStats(){
+  try { const L = gameList(), bySeason = {};
+    L.forEach(x => { const y = gameSeason(x.day); bySeason[y] = (bySeason[y] || 0) + x.pts; });
+    return { goals:L.reduce((s, x) => s + x.g, 0), assists:L.reduce((s, x) => s + x.a, 0), hattrick:L.reduce((m, x) => Math.max(m, x.g), 0), seasonPts:Math.max(0, ...Object.values(bySeason)) };
+  } catch(e){ return { goals:0, assists:0, hattrick:0, seasonPts:0 }; }
+}
+function saveGames(){ try { localStorage.setItem(GAMES_KEY, JSON.stringify(gamesMem || {})); } catch(e){} }
+/* XP abgleichen: nur bestätigte Matches; nichts wird doppelt gezählt */
+function syncGameXP(){
+  const P = progress, X = P.gameXP || (P.gameXP = {}), since = P.gameSince || '';
+  let changed = false;
+  const want = {}; gameList().forEach(x => { if (x.day >= since){ const v = gameXPof(x); if (v) want[x.day] = v; } });
+  Object.keys(X).forEach(d => { if (want[d] !== X[d]){ P.xp = Math.max(0, (P.xp || 0) - (X[d] || 0)); delete X[d]; changed = true; } });
+  Object.keys(want).forEach(d => { if (!X[d]){ X[d] = want[d]; P.xp = (P.xp || 0) + want[d]; changed = true; } });
+  if (changed) saveProgress();
+}
+function gameToast(html){ const t = $('toast'); if (!t) return; t.innerHTML = html; t.hidden = false; clearTimeout(t._h); t._h = setTimeout(() => { t.hidden = true; }, 4500); }
+/* Zähler im Eltern-Bereich (unter dem bestätigten Match) */
+const GAME_CNT = [['g', 'Tore'], ['a', 'Assists'], ['p', 'Strafen']];
+function gameCountersHTML(day){
+  const x = gameStat(day), xp = (progress.gameXP || {})[day];
+  return `<div class="gm-cnt" role="group" aria-label="Matchstatistik">${GAME_CNT.map(([k, l]) => `<div class="gm-c${k === 'p' ? ' pen' : ''}"><span class="gm-l">${l}</span>
+      <span class="gm-btns"><button type="button" class="gm-b" data-gm="${day}|${k}|-1" aria-label="${l} minus eins" ${x[k] ? '' : 'disabled'}>−</button><b aria-live="polite">${x[k]}</b><button type="button" class="gm-b" data-gm="${day}|${k}|1" aria-label="${l} plus eins">+</button></span></div>`).join('')}
+    <small class="gm-sum">${x.g + x.a} Punkt${x.g + x.a === 1 ? '' : 'e'}${xp ? ` · +${xp} XP` : ''}</small></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-gm]'); if (!b) return;
+  gamesMem = null;   // neu lesen: inzwischen vom anderen Gerät geholte Werte nicht überschreiben
+  const [day, k, d] = b.dataset.gm.split('|'), S = gamesStore(), x = Object.assign({ g:0, a:0, p:0 }, S[day]);
+  x[k] = Math.max(0, Math.min(k === 'p' ? 20 : 15, (x[k] || 0) + +d)); x.at = new Date().toISOString(); S[day] = x; saveGames();
+  const xp0 = (progress.gameXP || {})[day] || 0; syncGameXP(); const fresh = checkBadges(progress); if (fresh.length) saveProgress();
+  const xp1 = (progress.gameXP || {})[day] || 0;
+  clubRedraw();
+  const nb = document.querySelector(`[data-gm="${day}|${k}|${d}"]`); if (nb && !nb.disabled) nb.focus();
+  if (fresh.length) gameToast(`<b>Neues Abzeichen!</b> ${fresh.map(f => rpEsc(f.name)).join(', ')}`);
+  else if (xp1 > xp0) gameToast(`<b>+${xp1 - xp0} XP</b> für ${k === 'g' ? 'das Tor' : 'den Assist'}${xp1 >= GAME_XP_MAX ? ' · Maximum für dieses Match erreicht' : ''}`);
+});
 /* Extra-Schicht (APC 1.91, ab 1.92 inkl. Zusatztrainings aus apc.zusatz.v1 mit Status «Gemacht»): Bonus-XP für Zusatztrainings.
    - Zusatz-On-Ice (Tag ohne Eistraining in der Standardwoche), im Eltern-Bereich als «Gemacht» bestätigt
    - gebuchte Camps und Spezialtrainings: pro Tag, sobald der Tag erreicht ist
@@ -4542,15 +4658,68 @@ function openProgress(){
     <div class="hub-grid">${playerBtnHTML()}${trophyButtonHTML()}</div>
     <button class="all-trainings" id="btn-records"><span><b>Rekorde &amp; Testtag</b><small>${Object.keys(METRICS).filter(m => recList(m).length).length} von ${Object.keys(METRICS).length} Messwerten erfasst${(progress.tests || []).length ? ' · ' + progress.tests.length + ' Testtag' + (progress.tests.length > 1 ? 'e' : '') : ''}</small></span><span class="arrow" aria-hidden="true"></span></button>
     <button class="all-trainings" id="btn-analytics"><span><b>Analytics</b><small>${(progress.log || []).filter(e => e.fb && e.fb.strain).length} Feedbacks · ${(progress.tests || []).length} Testtag${(progress.tests || []).length === 1 ? '' : 'e'} als Kurven</small></span><span class="arrow" aria-hidden="true"></span></button>
+    ${(() => { const T = gameTotals(gameList(curSeason())); return `<button class="all-trainings" id="btn-games"><span><b>Matches</b><small>Club-Saison ${seasonLbl(curSeason())}${T.n ? ` · ${T.n} Match${T.n > 1 ? 'es' : ''} · ${T.g} Tore · ${T.a} Assists · ${T.pts} Punkte` : ' · Tore und Assists'}</small></span><span class="arrow" aria-hidden="true"></span></button>`; })()}
     <button class="all-trainings" id="btn-log"><span><b>Logbuch</b><small>${(progress.log || []).length} Trainings · Kalender und Liste</small></span><span class="arrow" aria-hidden="true"></span></button>
   </div>`;
   $('btn-log').onclick = () => openLog();
+  $('btn-games').onclick = () => openGames();
   $('btn-analytics').onclick = () => openAnalytics();
   $('btn-season').onclick = openSeason;
   $('btn-card').onclick = openCard;
   $('btn-trophies').onclick = openTrophies;
   $('btn-records').onclick = openRecords;
   show('progress');
+}
+
+/* ---- Fortschritt → Matches (APC 2.0): Club-Saison mit Punktekurve, Bestwerten, letzten Matches und Abzeichen ---- */
+const GAME_BADGES = ['goal1', 'assist1', 'hattrick', 'pts10', 'pts25', 'pts50'];
+let gamesSeason = null;
+function gamesChartSVG(L){
+  const W = 640, H = 220, pl = 34, pr = 16, pt = 22, pb = 30, f = n => n.toFixed(1);
+  let cum = 0; const C = L.map(x => (cum += x.pts));
+  const max = Math.max(4, cum), x = i => L.length < 2 ? (pl + W - pr) / 2 : pl + i * (W - pl - pr) / (L.length - 1), y = v => pt + (1 - v / max) * (H - pt - pb);
+  const step = max <= 8 ? 2 : max <= 20 ? 5 : max <= 50 ? 10 : 20, ticks = []; for (let v = 0; v <= max; v += step) ticks.push(v);
+  const grid = ticks.map(v => `<line x1="${pl}" x2="${W - pr}" y1="${f(y(v))}" y2="${f(y(v))}" stroke="var(--line)" stroke-width="1"/><text x="${pl - 8}" y="${f(y(v) + 4)}" fill="var(--muted)" font-size="12" text-anchor="end">${v}</text>`).join('');
+  const P = C.map((v, i) => [x(i), y(v)]);
+  const line = P.length > 1 ? `<polyline points="${P.map(q => f(q[0]) + ',' + f(q[1])).join(' ')}" fill="none" stroke="var(--ice)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>` : '';
+  const dots = P.map((q, i) => `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="${L[i].pts ? 6 : 4}" fill="${L[i].pts ? 'var(--ice)' : 'var(--panel)'}" stroke="var(--ice)" stroke-width="2.5"><title>${fmtDM(ymdDate(L[i].day))}: ${L[i].g} T, ${L[i].a} A · total ${C[i]}</title></circle>`).join('');
+  const lab = P.map((q, i) => (L.length <= 10 || i % Math.ceil(L.length / 10) === 0 || i === L.length - 1) ? `<text x="${f(q[0])}" y="${H - 8}" fill="var(--muted)" font-size="12" text-anchor="middle">${fmtDM(ymdDate(L[i].day))}</text>` : '').join('');
+  const last = P.length ? `<text x="${f(P[P.length - 1][0])}" y="${f(P[P.length - 1][1] - 12)}" fill="var(--text)" font-size="14" font-weight="700" text-anchor="${L.length > 1 ? 'end' : 'middle'}">${cum}</text>` : '';
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Punkte über die Saison: ${cum} Punkte in ${L.length} Matches">${grid}${line}${dots}${last}${lab}</svg>`;
+}
+function openGames(){
+  Voice.stop();
+  const seasons = [...new Set(gameList().map(x => gameSeason(x.day)).concat([curSeason()]))].sort((a, b) => b - a);
+  if (gamesSeason === null || !seasons.includes(gamesSeason)) gamesSeason = curSeason();
+  const L = gameList(gamesSeason), T = gameTotals(L), got = progress.badges || {};
+  const kpi = [[T.n, 'Matches'], [T.g, 'Tore'], [T.a, 'Assists'], [T.pts, 'Punkte'], [T.n ? T.ppg.toFixed(2).replace('.', ',') : '–', 'Punkte pro Match'], [T.p, 'Strafen']];
+  const best = [
+    ['Meiste Punkte in einem Match', T.best ? `${T.best.pts}` : '–', T.best ? `${fmtDM(ymdDate(T.best.day), true)} · ${T.best.g} T, ${T.best.a} A` : 'noch kein Punkt'],
+    ['Meiste Tore in einem Match', T.bestG ? `${T.bestG.g}` : '–', T.bestG ? fmtDM(ymdDate(T.bestG.day), true) : 'noch kein Tor'],
+    ['Längste Punkteserie', T.streak ? `${T.streak}` : '–', T.streak ? `Match${T.streak > 1 ? 'es' : ''} in Folge mit mindestens 1 Punkt` : 'noch keine Serie']];
+  $('screen-games').innerHTML = `
+  <div class="inner trophies hub">
+    <div class="tr-head"><div><p class="eyebrow">Fortschritt</p><h1>Matches</h1></div>
+      <button class="btn btn-ghost btn-small" id="btn-gm-back"><span class="arrow back" aria-hidden="true"></span> Fortschritt</button></div>
+    ${seasons.length > 1 ? `<div class="pl-tabs" role="group" aria-label="Saison wählen">${seasons.map(y => `<button class="av-chip" data-gms="${y}" aria-pressed="${y === gamesSeason}">Saison ${seasonLbl(y)}</button>`).join('')}</div>` : `<p class="muted gm-season">Club-Saison ${seasonLbl(gamesSeason)} (August bis Juli)</p>`}
+    <div class="gm-kpis">${kpi.map(([v, l], i) => `<div class="gm-kpi${i === 3 ? ' hi' : ''}${i === 5 ? ' pen' : ''}"><b>${v}</b><small>${l}</small></div>`).join('')}</div>
+    ${!L.length ? `<section class="an-box"><p class="eyebrow">Noch keine Matches</p><h3>Bereit fürs erste Tor?</h3>
+        <p class="muted">Nach jedem Match bestätigen die Eltern im Eltern-Bereich «Gemacht» und tragen Tore, Assists und Strafen ein. Hier entsteht dann deine Saison.</p></section>`
+    : `<section class="an-box gm-chart"><p class="eyebrow">Punkte über die Saison</p>${gamesChartSVG(L)}
+        <p class="muted gm-cap">Jeder Punkt ist ein Match · Linie = Punkte (Tore + Assists) zusammengezählt · leerer Kreis = Match ohne Punkt</p></section>
+      <div class="gm-best">${best.map(([l, v, d]) => `<div class="gm-bv"><small>${l}</small><b>${v}</b><span>${d}</span></div>`).join('')}</div>
+      <section class="an-box"><p class="eyebrow">Letzte Matches</p>
+        <table class="gm-tab"><thead><tr><th>Datum</th><th class="r">Tore</th><th class="r">Assists</th><th class="r">Punkte</th><th class="r">Strafen</th></tr></thead><tbody>
+        ${L.slice().reverse().slice(0, 10).map(x => `<tr${T.best && x.day === T.best.day ? ' class="best"' : ''}><td>${ymdDate(x.day).toLocaleDateString('de-CH', { weekday:'short', day:'numeric', month:'numeric' })}<small>${x.kind}</small></td><td class="r">${x.g}</td><td class="r">${x.a}</td><td class="r"><b>${x.pts}</b></td><td class="r">${x.p || '–'}</td></tr>`).join('')}
+        </tbody></table>${L.length > 10 ? `<p class="muted gm-cap">${L.length - 10} ältere Matches im Bericht (Eltern-Bereich).</p>` : ''}</section>`}
+    <section class="an-box"><p class="eyebrow">Abzeichen für Matches</p>
+      <div class="gm-badges">${GAME_BADGES.map(id => BADGES.find(b => b.id === id)).filter(Boolean).map(b => { const on = !!got[b.id], pr = badgeProgress(b, stats(progress));
+        return `<div class="gm-bd${on ? ' on' : ''}">${badgeSVG(b, on)}<b>${b.name}</b><small>${on ? 'Erreicht' : `${pr.cur} / ${pr.n}`}</small></div>`; }).join('')}</div>
+      <p class="muted gm-cap">Tore geben +${GOAL_XP} XP, Assists +${ASSIST_XP} XP, höchstens ${GAME_XP_MAX} XP pro Match. Strafen zählen nur in der Statistik.</p></section>
+  </div>`;
+  $('btn-gm-back').onclick = openProgress;
+  document.querySelectorAll('#screen-games [data-gms]').forEach(b => b.onclick = () => { gamesSeason = +b.dataset.gms; openGames(); });
+  show('games');
 }
 
 /* ---- Analytics: Auswertung der Feedbacks (Belastung, Spass, Schmerzen, Trainings pro Woche)
@@ -4781,7 +4950,7 @@ function clubParentsHTML(){
       ${shown.map(day => `<div class="cl-dayblk"><p class="cl-day">${fd(day)}${clubParentsEdit === day && !clubOpen(day).length ? ' <button class="cl-link" data-cledit="">Fertig</button>' : ''}</p>${clubRowsHTML(day)}</div>`).join('')}
       ${open.length > 3 ? `<button class="cl-link" data-clall="1">${clubShowAll ? 'Weniger anzeigen' : `Weitere ${open.length - 3} Tage anzeigen`}</button>` : ''}
       ${done.length ? `<details class="cl-done"><summary>${done.length} ${done.length === 1 ? 'Tag' : 'Tage'} bestätigt</summary>
-        ${done.map(day => `<button class="cl-sum" data-cledit="${day}"><span><b>${fd(day)}</b> ${clubSumTxt(day)}${(progress.extraXP || {})['ice|' + day] ? ` · Extra-Schicht +${EXTRA_XP} XP` : ''}${(n => n ? ` · <span class="km-sum">${KOMM_ICO}${n} Kommentar${n > 1 ? 'e' : ''}</span>` : '')(clubItems(planFor(ymdDate(day))).filter(([k]) => kommGet(`club|${day}|${k}`)).length)}</span><span class="cl-link">Ändern</span></button>`).join('')}</details>` : ''}
+        ${done.map(day => `<button class="cl-sum" data-cledit="${day}"><span><b>${fd(day)}</b> ${clubSumTxt(day)}${(progress.extraXP || {})['ice|' + day] ? ` · Extra-Schicht +${EXTRA_XP} XP` : ''}${gameDone(day) ? (x => ` · ${x.g} T, ${x.a} A${x.p ? `, ${x.p} Str.` : ''}`)(gameStat(day)) : ''}${(n => n ? ` · <span class="km-sum">${KOMM_ICO}${n} Kommentar${n > 1 ? 'e' : ''}</span>` : '')(clubItems(planFor(ymdDate(day))).filter(([k]) => kommGet(`club|${day}|${k}`)).length)}</span><span class="cl-link">Ändern</span></button>`).join('')}</details>` : ''}
     </div></div>`;
 }
 document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-clall]'); if (!t) return; clubShowAll = !clubShowAll; clubRedraw(); });
@@ -4888,7 +5057,7 @@ function renderParents(){
   const reset = $('btn-reset');
   reset.onclick = () => {
     if (reset.dataset.armed){
-      progress.xp = 0; progress.completed = 0; progress.last = null; progress.log = []; progress.badges = {}; progress.cards = []; progress.quests = {}; progress.weekBonus = {}; progress.extraXP = {}; progress.extraSince = ymd(new Date()); saveProgress(); renderParents();
+      progress.xp = 0; progress.completed = 0; progress.last = null; progress.log = []; progress.badges = {}; progress.cards = []; progress.quests = {}; progress.weekBonus = {}; progress.extraXP = {}; progress.extraSince = ymd(new Date()); progress.gameXP = {}; progress.gameSince = ymd(new Date()); saveProgress(); renderParents();
     } else { reset.dataset.armed = '1'; reset.textContent = 'Wirklich zurücksetzen? Nochmals tippen'; }
   };
   bindBackup();
@@ -5094,7 +5263,8 @@ function reportData(from, to){
     camps:camps.filter(c => c.booked && c.from && ymdDate(c.to).getTime() >= F && ymdDate(c.from).getTime() <= T).sort((a, b) => a.from < b.from ? -1 : 1),
     recov:Object.keys(recov).filter(k => { const t = ymdDate(k).getTime(); return t >= F && t <= T && (recov[k].sauna || recov[k].whirl); }).sort().map(k => Object.assign({ day:k }, recov[k])),
     zusatz:Object.keys(zusatz).filter(k => { const t = ymdDate(k).getTime(); return t >= F && t <= T; }).sort().flatMap(k => (zusatz[k] || []).map(z => Object.assign({ day:k }, z))),
-    komm:rpKomm(F, T) };
+    komm:rpKomm(F, T),
+    games:gameList().filter(x => { const t = ymdDate(x.day).getTime(); return t >= F && t <= T; }) };
 }
 /* Kommentare im Zeitraum (APC 1.95): [{ day, what, st, t }], nach Datum sortiert */
 function rpKomm(F, T){
@@ -5121,6 +5291,7 @@ function clubFazit(D){
     return `${l} ${x.done} von ${n}${add.length ? ` (${add.join(', ')})` : ''}`; };
   const t = [part('on', 'On-Ice'), part('off', 'Off-Ice'), part('game', 'Matches/Turniere')].filter(Boolean);
   if (t.length) out.push(`Club-Trainings: ${t.join(', ')}.`);
+  { const G = gameTotals(D.games || []); if (G.n) out.push(`Matches: ${G.n} gespielt, ${G.g} Tor${G.g === 1 ? '' : 'e'}, ${G.a} Assist${G.a === 1 ? '' : 's'} (${G.pts} Punkte)${G.p ? `, ${G.p} Strafe${G.p === 1 ? '' : 'n'}` : ''}.`); }
   { const Z = (D.zusatz || []).filter(z => z.s === 'done'); if (Z.length) out.push(`Zusatztrainings: ${Z.length} gemacht (${Z.reduce((s, z) => s + (z.min || 0), 0)} Minuten).`); }
   if (c.off.missed >= 3) warn.push(`Off-Ice ${c.off.missed}× ausgelassen (${clubWhyTxt(c.why.off)}).`);
   if (c.on.missed >= 2) warn.push(`On-Ice ${c.on.missed}× ausgelassen (${clubWhyTxt(c.why.on)}).`);
@@ -5172,6 +5343,16 @@ function rpZusatzHTML(D){
     <table class="rp-tab rp-grid"><thead><tr><th>Datum</th><th>Art</th><th>Ort · Notiz</th><th class="r">Dauer</th><th class="r">Status</th></tr></thead><tbody>
     ${L.map(z => `<tr><td>${rpDate(ymdDate(z.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' })}</td><td>${ztArt(z.art)}</td><td>${[ztOrt(z), z.note].filter(Boolean).map(rpEsc).join(' · ')}</td><td class="r">${z.min} Min</td><td class="r">${ztStTxt(z.s)}</td></tr>`).join('')}
     </tbody></table></section>`;
+}
+/* Matches (APC 2.0): Summen und Tabelle pro Match */
+const rpGameTot = D => { const t = gameTotals(D.games || []); return `${t.n} Match${t.n === 1 ? '' : 'es'} · ${t.g} Tore · ${t.a} Assists · ${t.pts} Punkte (${t.ppg.toFixed(2).replace('.', ',')} pro Match) · ${t.p} Strafen`; };
+function rpGamesHTML(D){
+  const L = D.games || []; if (!L.length) return '';
+  const t = gameTotals(L);
+  return `<section class="rp-sec"><h2>Matches: Tore und Assists</h2><table class="rp-tab rp-grid"><thead><tr><th>Datum</th><th>Spiel</th><th class="r">Tore</th><th class="r">Assists</th><th class="r">Punkte</th><th class="r">Strafen</th></tr></thead><tbody>
+    ${L.map(x => `<tr><td>${rpDate(ymdDate(x.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' })}</td><td>${x.kind}</td><td class="r">${x.g}</td><td class="r">${x.a}</td><td class="r"><b>${x.pts}</b></td><td class="r">${x.p || '–'}</td></tr>`).join('')}
+    <tr><td colspan="2"><b>Total</b></td><td class="r"><b>${t.g}</b></td><td class="r"><b>${t.a}</b></td><td class="r"><b>${t.pts}</b></td><td class="r"><b>${t.p || '–'}</b></td></tr></tbody></table>
+    <p class="rp-cap">${rpGameTot(D)}${t.best ? ` · Bestes Match: ${t.best.pts} Punkte am ${rpDate(ymdDate(t.best.day))}` : ''}</p></section>`;
 }
 function rpKommHTML(D){
   if (!(D.komm || []).length) return '';
@@ -5273,6 +5454,7 @@ function reportPaperHTML(D){
     ${D.len <= 63 * 864e5 ? `<section class="rp-sec"><h2>Trainingskalender</h2>${rpCalendar(D)}</section>` : ''}
     ${D.weeks.length >= 2 ? `<section class="rp-sec"><h2>Regelmässigkeit</h2>${rpWeeks(D)}</section>` : ''}
     ${rpClubHTML(D)}
+    ${rpGamesHTML(D)}
     ${rpZusatzHTML(D)}
     ${rpCampsHTML(D)}
     ${rpKommHTML(D)}
@@ -5478,6 +5660,20 @@ async function buildReportPDF(D){
       y += caption('Quote = gemacht von gemacht + ausgelassen. «Ausgefallen» = vom Club abgesagt, zählt nicht. «Offen» = noch nicht bestätigt.');
     }
     y += 16; }
+  // Matches (APC 2.0)
+  if ((D.games || []).length){
+    const L = D.games, t = gameTotals(L), xs = [M + .52 * CW, M + .64 * CW, M + .77 * CW, M + CW - 6];
+    const head = () => { rect(M, y, CW, 17, C.navy); txt('Datum', M + 6, y + 4.5, 8.3, { bold:true, color:C.white }); txt('Spiel', M + .27 * CW, y + 4.5, 8.3, { bold:true, color:C.white });
+      ['Tore', 'Assists', 'Punkte', 'Strafen'].forEach((h, i) => txt(h, xs[i], y + 4.5, 8.3, { bold:true, color:C.white, align:'right' })); y += 17; };
+    ensure(22 + 17 + 17 * Math.min(3, L.length) + 40); heading('Matches: Tore und Assists'); y += 24; head();
+    L.forEach((x, i) => { if (y + 17 > BOTTOM){ newPage(); head(); } if (i % 2) rect(M, y, CW, 17, col('#F6F8FA'));
+      txt(rpDate(ymdDate(x.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' }), M + 6, y + 4.5, 8.2); txt(x.kind, M + .27 * CW, y + 4.5, 8.2);
+      [x.g, x.a, x.pts, x.p || '–'].forEach((v, j) => txt(String(v), xs[j], y + 4.5, 8.2, { align:'right', bold:j === 2, color:j === 2 ? C.navy : C.text }));
+      line(M, y + 17, M + CW, y + 17, C.line); y += 17; });
+    ensure(17 + 30); rect(M, y, CW, 17, C.iceL); txt('Total', M + 6, y + 4.5, 8.3, { bold:true, color:C.navy });
+    [t.g, t.a, t.pts, t.p || '–'].forEach((v, j) => txt(String(v), xs[j], y + 4.5, 8.3, { align:'right', bold:true, color:C.navy })); y += 17;
+    y += 6; y += caption(rpGameTot(D) + (t.best ? ` · Bestes Match: ${t.best.pts} Punkte am ${rpDate(ymdDate(t.best.day))}` : '')) + 14;
+  }
   // Zusatztrainings (APC 1.92)
   { const L = (D.zusatz || []).filter(z => z.s !== 'plan');
     if (L.length){
@@ -6382,6 +6578,7 @@ function stats(prog){
     tests:    (prog.tests || []).length,
     elite:    log.filter(e => e.elite).length,
     champion: prog.titles || 0,
+    ...gameBadgeStats(),
     weekCount: keys.reduce((m, k) => Math.max(m, weeks[k]), 0),
     weekStreak: best,
     early:   hours.some(d => d.getHours() < 9) ? 1 : 0,
@@ -7149,7 +7346,8 @@ const GLYPHS = {
   cards:'<rect class="gs" x="32" y="38" width="22" height="31" rx="3"/><rect x="46" y="44" width="22" height="31" rx="3"/>',
   bolt:'<path d="M55 32 L37 60 H50 L44 84 L65 52 H52 Z"/>',
   trend:'<path class="gs" d="M31 72 L43 57 L53 63 L68 43 M59 43 H68 V52"/>',
-  trend2:'<path class="gs" d="M34 44 H62 L54 36 M66 66 H38 L46 74"/>'
+  trend2:'<path class="gs" d="M34 44 H62 L54 36 M66 66 H38 L46 74"/>',
+  puck:'<ellipse cx="50" cy="52" rx="19" ry="7"/><path d="M31 52 V62 A19 7 0 0 0 69 62 V52 A19 7 0 0 1 31 52 Z" opacity=".75"/>'
 };
 function badgeSVG(b, on){
   const g = b.glyph.charAt(0) === '#'
@@ -7404,6 +7602,7 @@ try { Sound.setMode('calm'); if (settings.music) Sound.unlock(); } catch(e){}
 ['touchend','click','keydown'].forEach(ev => document.addEventListener(ev, fixAudio, { capture:true, passive:true }));
 syncToggles();
 syncExtraXP();
+syncGameXP();
 renderCenter();
 show('center');
 checkWhatsNew();
