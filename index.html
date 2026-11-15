@@ -906,6 +906,7 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .gm-b:disabled{opacity:.35;cursor:default}
 .gm-c:not(.pen) .gm-b[data-gm$="|1"]{border-color:var(--gold);color:var(--gold)}
 .gm-sum{margin-left:auto;color:var(--gold);font-weight:700;font-size:.85rem}
+.gm-done{flex-basis:100%;min-height:44px}
 .gm-season{margin:0;color:var(--text);font-weight:600}
 .gm-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
 .gm-kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 10px;display:flex;flex-direction:column;gap:2px;text-align:center}
@@ -3602,7 +3603,8 @@ function gameCountersHTML(day){
   const x = gameStat(day), xp = (progress.gameXP || {})[day];
   return `<div class="gm-cnt" role="group" aria-label="Matchstatistik">${GAME_CNT.map(([k, l]) => `<div class="gm-c${k === 'p' ? ' pen' : ''}"><span class="gm-l">${l}</span>
       <span class="gm-btns"><button type="button" class="gm-b" data-gm="${day}|${k}|-1" aria-label="${l} minus eins" ${x[k] ? '' : 'disabled'}>−</button><b aria-live="polite">${x[k]}</b><button type="button" class="gm-b" data-gm="${day}|${k}|1" aria-label="${l} plus eins">+</button></span></div>`).join('')}
-    <small class="gm-sum">${x.g + x.a} Punkt${x.g + x.a === 1 ? '' : 'e'}${xp ? ` · +${xp} XP` : ''}</small></div>`;
+    <small class="gm-sum">${x.g + x.a} Punkt${x.g + x.a === 1 ? '' : 'e'}${xp ? ` · +${xp} XP` : ''}</small>
+    ${clubParentsEdit === day && !clubOpen(day).length ? '<button type="button" class="btn btn-primary btn-small gm-done" data-cledit="">Fertig</button>' : ''}</div>`;
 }
 document.addEventListener('click', e => {
   const b = e.target.closest && e.target.closest('[data-gm]'); if (!b) return;
