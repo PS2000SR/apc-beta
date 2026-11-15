@@ -18,7 +18,7 @@
   var SP = Storage.prototype, rawGet = SP.getItem, rawSet = SP.setItem, rawRem = SP.removeItem;
   var META = 'apc.sync.v1';
   var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg.', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.'];   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
-  var MERGE = { 'apc.progress.v1':mergeProgress };
+  var MERGE = { 'apc.progress.v1':mergeProgress, 'apc.komm.v1':mergeKomm };
   var syncable = function(k){ k = String(k); return k.indexOf('apc.') === 0 && !SKIP.some(function(p){ return k.indexOf(p) === 0; }); };
   var enabled = !!(CFG.url && CFG.key);
 
@@ -155,6 +155,14 @@
     out.badges = Object.assign({}, b.badges, a.badges);
     out.cards = uni(a.cards, b.cards, function(c){ return JSON.stringify(c); });
     ['xp', 'completed', 'prCount', 'titles'].forEach(function(k){ out[k] = Math.max(a[k] || 0, b[k] || 0); });
+    return out;
+  }
+
+  // Kommentare (APC 1.95): pro Eintrag gilt der neuere Stand (auch Löschen, dann mit leerem Text)
+  function mergeKomm(a, b){
+    a = a || {}; b = b || {}; var out = {};
+    Object.keys(Object.assign({}, b, a)).forEach(function(k){ var x = a[k], y = b[k];
+      out[k] = !x ? y : !y ? x : (String(y.at || '') > String(x.at || '') ? y : x); });
     return out;
   }
 
