@@ -1457,6 +1457,7 @@ const CHANGELOG = [
          'Missionen fordernder: Kraft, Rumpf, Ausdauer und Koordination meist 60 Sekunden pro Übung, Schnelligkeit und Sprünge mit mehr Durchgängen. Die meisten Missionen dauern jetzt 35–40 Minuten.'],
     fix:['Animationen der Mission «Core Strength» genauer: Katze & Kuh mit rundem Rücken und Hohlkreuz, Russian Twist von der Seite mit Rücklage, Füssen in der Luft und Ball, der mit beiden Armen links und rechts neben der Hüfte auf den Boden tippt, 90/90 Hip Switches von vorne mit festen Füssen, Knien wie ein Scheibenwischer und gestreckten Armen (Hinweis «Knie nach rechts / hoch / nach links»), Seitliche Rumpfdehnung mit Seitenneigung und ruhigem Armwechsel.',
          'Bird-Dog, Dead Bug und Glute Bridge: ruhiger Ablauf, Rücken bleibt beim Dead Bug am Boden, beim Bird-Dog nur die Zehenspitzen am Boden.',
+         'Kettlebell Halo neu: Kettlebell kopfüber mit gut sichtbarem Griff, Kreis eng um den Kopf (hinten hinter dem Kopf durch), Richtungswechsel nach jedem Kreis, Figur leicht seitlich gedreht.',
          'Weitere Animationen überarbeitet: Hüftkreisen (Becken kreist, Füsse bleiben stehen), Rotationswurf (beide Hände am Ball), 90/90 Hip Mobility (von vorne), Pigeon Stretch (eigene Animation), Gesäss dehnen (Figure 4 in Rückenlage), Springseil High Knees (von vorne), Schmetterling, Ausschütteln.'] },
   { v:'2.01', date:'16.11.2026',
     neu:['Bei jeder Übung mit Medizinball, Slamball oder Kettlebell steht jetzt das Gewicht (z. B. «Kettlebell 6 kg», «Medizinball 1 kg») – im Trainingsplan, im Aufbau, in der Vorschau, während der Übung und bei «Danach».'],
@@ -1749,7 +1750,7 @@ Object.assign(EXERCISES, {
   kbDead:       { anim:'kbDead', name:'Kettlebell Kreuzheben', gear:'Kettlebell 8 kg', goal:'Hüftkraft für den Skating-Abstoss', instruction:'Kettlebell (8 kg) zwischen den Füssen. Po nach hinten schieben, Rücken gerade, mit gestreckten Armen greifen. Hüfte nach vorn drücken und aufrichten, dann kontrolliert absenken.', coach:'Rücken gerade, Hüfte nach vorn!' },
   kbFarmer:     { anim:'kbFarmer', name:'Goblet Carry', gear:'Kettlebell 8 kg', goal:'Stabiler Rumpf und aufrechte Haltung', instruction:'Eine Kettlebell (8 kg) an den Griffen vor der Brust halten. Aufrecht und mit ruhigen Schritten zwischen zwei Markierungstellern hin und her gehen. Ellbogen nah am Körper, Bauch fest.', coach:'Gross machen, Bauch fest!' },
   kbSuitcase:   { anim:'kbSuitcase', name:'Suitcase Carry', gear:'Kettlebell 6 kg', goal:'Seitliche Rumpfstabilität für Zweikämpfe', instruction:'Eine Kettlebell (6 kg) nur in einer Hand tragen und hin und her gehen, ohne zur Seite zu kippen. Nach der Hälfte die Hand wechseln.', coach:'Nicht kippen, ganz gerade bleiben!' },
-  kbHalo:       { anim:'kbHalo', name:'Kettlebell Halo', gear:'Kettlebell 4 kg', goal:'Freie Schultern für Schuss und Pass', instruction:'Leichte Kettlebell (4 kg) an den Griffen kopfüber halten und langsam um den Kopf kreisen. Bauch fest, Kopf ruhig. Nach der Hälfte die Richtung wechseln.', coach:'Langsam kreisen, Bauch fest!' },
+  kbHalo:       { anim:'kbHalo', name:'Kettlebell Halo', gear:'Kettlebell 4 kg', goal:'Freie Schultern für Schuss und Pass', instruction:'Kettlebell (4 kg) kopfüber an den Griffen vor der Brust halten. Eng um den Kopf kreisen: seitlich auf Stirnhöhe vorbei, hinten hinter dem Kopf durch, zurück vor die Brust. Nach jedem Kreis die Richtung wechseln. Bauch fest, Kopf ruhig.', coach:'Langsam kreisen, Bauch fest!' },
   kbSwing:      { anim:'kbSwing', name:'Kettlebell Swing', gear:'Kettlebell 6 kg', goal:'Explosive Hüfte', instruction:'Leichte Kettlebell (6 kg) mit beiden Händen. Hüfte nach hinten schieben, Kettlebell zwischen den Beinen nach hinten schwingen, dann die Hüfte explosiv nach vorn strecken. Die Kettlebell schwingt nur bis Brusthöhe – die Kraft kommt aus der Hüfte, nicht aus den Armen.', coach:'Hüfte schnappt nach vorn!' },
   mbChest:      { anim:'mbChest', name:'Rebound-Brustpass an die Wand', gear:'Medizinball 2 kg', goal:'Explosive Arme für Pass und Check', instruction:'Rebound-Medizinball (2 kg) vor der Brust. Einen Meter vor der Wand stehen, den Ball explosiv an die Wand stossen, fangen und sofort wieder werfen.', coach:'Explosiv stossen, schnell fangen!' },
   mbRot:        { anim:'mbRot', name:'Rotationswurf an die Wand', gear:'Medizinball 1 kg', goal:'Rumpfkraft für den Schuss', instruction:'Seitlich zur Wand in Schussstellung stehen. Rebound-Medizinball (1 kg) auf Hüfthöhe nach hinten führen, dann aus Beinen und Hüfte drehen und kräftig an die Wand werfen. Nach der Hälfte die Seite wechseln – wie Vorhand und Rückhand.', coach:'Aus der Hüfte drehen – wie beim Schuss!' },
@@ -2341,7 +2342,10 @@ const COACH = {
    Winkel in Grad, 0 = nach unten, positiv = nach rechts/vorne.
    ===================================================================== */
 const BASE_SIDE  = { af:0, ab:0, bk:0, hd:0, las:1, ras:1, lls:1, lss:1, rls:1, rss:1, t:2, la1:6, la2:10, ra1:-6, ra2:4, ll1:3, ll2:0, rl1:-3, rl2:0, dx:0, lift:0, tl:1, fx:1 };
-const BASE_FRONT = { af:0, ab:0, bk:0, hd:0, las:1, ras:1, lls:1, lss:1, rls:1, rss:1, t:0, la1:-10, la2:-6, ra1:10, ra2:6, ll1:-5, ll2:-3, rl1:5, rl2:3, dx:0, lift:0, tl:1, fx:1 };
+const BASE_FRONT = { yaw:0, ah:0, af:0, ab:0, bk:0, hd:0, las:1, ras:1, lls:1, lss:1, rls:1, rss:1, t:0, la1:-10, la2:-6, ra1:10, ra2:6, ll1:-5, ll2:-3, rl1:5, rl2:3, dx:0, lift:0, tl:1, fx:1 };
+// Halo: Winkel der Kettlebell – erste Hälfte ein Kreis in die eine Richtung, zweite Hälfte zurück in die andere; vorne kurz verweilen
+const haloA = ph => { const h = ph < .5 ? ph * 2 : (ph - .5) * 2, e = Math.min(1, Math.max(0, (h - .06) / .88)), k = e * e * (3 - 2 * e);
+  return (ph < .5 ? 1 : -1) * k * Math.PI * 2; };
 const ANIMS = {
   hampelmann: { view:'front', period:.9, bounce:12, keys:[ {}, { la1:-165, la2:-172, ra1:165, ra2:172, ll1:-22, ll2:-20, rl1:22, rl2:20 } ] },
   armkreisen: { view:'front', period:1.1, fn:ph => { const a = ph * Math.PI * 2, s = Math.sin(a) * 16, c = Math.cos(a) * 14;
@@ -2817,6 +2821,11 @@ Object.assign(ANIMS, {
   // Kettlebell: Griff in der Hand, Kugel in Richtung dir (Standard: hängt nach unten)
   const kb = (h, dir, s) => { s = (s || 1) * 1.3; const d = nrm(dir || [0, 1]), c = [h[0] + d[0] * 9 * s, h[1] + d[1] * 9 * s];
     return `<line class="p-kbh" x1="${f1(h[0])}" y1="${f1(h[1])}" x2="${f1(c[0])}" y2="${f1(c[1])}"/><circle class="p-kb" cx="${f1(c[0])}" cy="${f1(c[1])}" r="${f1(7.5 * s)}"/>`; };
+  // Kettlebell mit gut sichtbarem Bügel (für Halo): Bügel als breiter Bogen zwischen den Händen, Kugel in Richtung dir
+  const kbBig = (h, dir, s) => { s = (s || 1) * 1.3; const d = nrm(dir || [0, 1]), p = [-d[1], d[0]], r = 7.5 * s, c = [h[0] + d[0] * 13 * s, h[1] + d[1] * 13 * s];
+    const P = (o, k, m) => [o[0] + p[0] * k + d[0] * m, o[1] + p[1] * k + d[1] * m], Q = q => `${f1(q[0])} ${f1(q[1])}`;
+    const b1 = P(c, .62 * r, -.72 * r), b2 = P(c, -.62 * r, -.72 * r), t1 = P(h, 1.05 * r, -.35 * r), t2 = P(h, -1.05 * r, -.35 * r);
+    return `<circle class="p-kb" cx="${f1(c[0])}" cy="${f1(c[1])}" r="${f1(r)}"/><path d="M${Q(b1)} C${Q(t1)} ${Q(t2)} ${Q(b2)}" fill="none" stroke="#c6d2e2" stroke-width="${f1(2.6 * s)}" stroke-linecap="round"/>`; };
   const armDir = (e, h) => [h[0] - e[0], h[1] - e[1]];
   // Rebound-Ball: in den Händen, Flug zur Wand (a→b), zurück (b→c)
   const wallBall = (J, ph, wallX, o) => { o = o || {};
@@ -2861,10 +2870,21 @@ Object.assign(ANIMS, {
                   props:(J, ph) => X.scroll(ph, .5, 120, x => dot(x, 'yellow')) + kb(mid(J.lh, J.rh), [0, 1]) },
     kbSuitcase: { view:'side', period:1.3, bounce:2, keys:[ walkA, walkB ],
                   props:(J, ph) => X.scroll(ph, .5, 120, x => dot(x, 'blue')) + kb([J.rh[0] + 5, J.rh[1]]) },
-    kbHalo:     { view:'front', period:3, fn:ph => { const a = ph * Math.PI * 2, T = [Math.sin(a) * 20, -58 + Math.cos(a) * 4];
-                    const L = ik([-11, -50], [T[0] - 3, T[1]], 1), R = ik([11, -50], [T[0] + 3, T[1]], -1);
-                    return { la1:L[0], la2:L[1], ra1:R[0], ra2:R[1] }; },
-                  props:J => kb(mid(J.lh, J.rh), [0, -1], .85) },
+    // Halo: Kettlebell kopfüber an den Griffen, Kreis eng um den Kopf – vorne auf Kinnhöhe, seitlich am Ohr, hinten am Nacken
+    // Halo: ein Kreis in die eine Richtung, vorne kurz ankommen, dann ein Kreis in die andere Richtung (wie im Referenzvideo)
+    // Halo: ein Kreis in die eine Richtung, vorne kurz ankommen, dann ein Kreis in die andere Richtung (wie im Referenzvideo).
+    // Blick leicht von der Seite (yaw): Weg der Kettlebell in 3D gerechnet und gedreht abgebildet.
+    kbHalo:     { view:'front', period:8, fn:ph => { const a = haloA(ph), c = Math.cos(a), Y = 42 * DEG, cy = Math.cos(Y), sy = Math.sin(Y);
+                    const X = Math.sin(a) * 19, Z = c * (c > 0 ? 8 : 14), H = c > 0 ? -72 + 30 * c * c : -72 - 10 * -c;   // hinten: Hände oben am Hinterkopf, Kugel hängt hinter dem Kopf   // X seitlich, Z nach vorne, H Höhe
+                    const P = (x, z) => x * cy + z * sy;   // gedrehte Abbildung auf den Bildschirm
+                    const fr = c > .3 ? -1 : 1;   // vorne: Ellbogen nach unten (nicht verdreht), seitlich/hinten: Ellbogen hoch
+                    const hw = 6 + 2 * Math.max(0, -c);
+                    const L = ik([-11 * cy, -50], [P(X - hw, Z), H], fr), R = ik([11 * cy, -50], [P(X + hw, Z), H], -fr);
+                    return { yaw:42, la1:L[0], la2:L[1], ra1:R[0], ra2:R[1], ll1:-9, ll2:-6, rl1:9, rl2:6, ah:c < -.25 ? 1 : 0 }; },
+                  caption:ph => { const a = haloA(ph), c = Math.cos(a), sn = Math.sin(a); return c > .5 ? (ph < .5 ? 'Vor der Brust – Kreis nach links' : 'Vor der Brust – Kreis nach rechts') : c < -.5 ? 'Hinter dem Kopf' : sn > 0 ? 'Links am Kopf vorbei' : 'Rechts am Kopf vorbei'; },   // Seiten aus Sicht des Spielers
+                  // Kugel dreht mit: vorne nach oben, seitlich nach aussen, hinten nach unten
+                  props:(J, ph) => { const a = haloA(ph); return Math.cos(a) < -.25 ? kbBig(mid(J.lh, J.rh), [Math.sin(a), -Math.cos(a)], .85) : ''; },
+                  over:(J, ph) => { const a = haloA(ph); return Math.cos(a) >= -.25 ? kbBig(mid(J.lh, J.rh), [Math.sin(a), -Math.cos(a)], .85) : ''; } },
     mbChest:    { view:'side', period:1.6, keys:[
                   { t:8, dx:-30, ll1:18, ll2:-6, rl1:-12, rl2:-14, ...chest },
                   { t:4, dx:-30, ll1:18, ll2:-6, rl1:-12, rl2:-14, la1:88, la2:90, ra1:86, ra2:88 } ],
@@ -3290,8 +3310,10 @@ function drawFigure(it, ph){
   const hip = [0, 0], neck = [S(p.t) * tl, -C(p.t) * tl];
   const u = [S(p.t), -C(p.t)], perp = [-u[1], u[0]];
   const off = (q, v, w) => [q[0] + v[0] * w, q[1] + v[1] * w];
-  const shL = front ? off(neck, perp, -BODY.sw + 2) : off(neck, u, -3), shR = front ? off(neck, perp, BODY.sw - 2) : off(neck, u, -3);
-  const hpL = front ? off(hip, perp, -BODY.hw) : hip, hpR = front ? off(hip, perp, BODY.hw) : hip;
+  // yaw (nur Frontansicht): Figur leicht seitlich gedreht – Schultern, Hüfte und Rumpf schmaler, Gesicht zur Seite verschoben
+  const ys = front && p.yaw ? Math.cos(p.yaw * DEG) : 1, yo = front && p.yaw ? Math.sin(p.yaw * DEG) : 0;
+  const shL = front ? off(neck, perp, (-BODY.sw + 2) * ys) : off(neck, u, -3), shR = front ? off(neck, perp, (BODY.sw - 2) * ys) : off(neck, u, -3);
+  const hpL = front ? off(hip, perp, -BODY.hw * ys) : hip, hpR = front ? off(hip, perp, BODY.hw * ys) : hip;
   // hd: Kopf nicken (Grad, relativ zum Rumpf) – z. B. Kopf senken bei «Katze», heben bei «Kuh»
   const uh = p.hd ? [S(p.t + p.hd), -C(p.t + p.hd)] : u;
   const head = off(neck, uh, BODY.neck + BODY.headR);
@@ -3334,7 +3356,7 @@ function drawFigure(it, ph){
       capsuleA(hp, lerp(hp, kn, .62), 11, 9.8, 't-shorts' + k), capsuleA(hp, lerp(hp, kn, .6), 1.3, 1.3, 't-seam'),
       capsuleA(ft.heel, ft.toe, 5, 4, 't-shoe' + k), bandT(ft.heel, ft.toe, .55, .75, 5, 4, 't-accent')]; };
   const pv = [perp[0] * fx, perp[1]];
-  const wS = front ? BODY.sw + 3 : 10.5, wH = front ? BODY.hw + 6 : 8.6;
+  const wS = front ? (BODY.sw + 3) * ys : 10.5, wH = front ? (BODY.hw + 6) * ys : 8.6;
   const hp = W.hip, top = A(off(neck, u, -1)), Q = q => F1(q[0]) + ' ' + F1(q[1]);
   const t1 = [top[0] + pv[0] * wS, top[1] + pv[1] * wS], t2 = [top[0] - pv[0] * wS, top[1] - pv[1] * wS];
   const h1 = [hp[0] + pv[0] * wH, hp[1] + pv[1] * wH], h2 = [hp[0] - pv[0] * wH, hp[1] - pv[1] * wH];
@@ -3351,7 +3373,8 @@ function drawFigure(it, ph){
   if (front){
     const HR = R + 2.6;
     hair = { t:'path', c:'t-hair', d:`M${Q(pt(ua + 1.75, R + 1))} Q${Q(pt(ua + 1.1, HR + 2))} ${Q(pt(ua + .3, HR + 1))} Q${Q(pt(ua - .4, HR + 2.2))} ${Q(pt(ua - 1.75, R + 1))} Q${Q(pt(ua - .9, R * .45))} ${Q(pt(ua - .2, R * .62))} Q${Q(pt(ua + .5, R * .4))} ${Q(pt(ua + 1.75, R + 1))} Z` };
-    face = [circ([hx[0] - pv[0] * 4.2 - u[0], hx[1] - pv[1] * 4.2 - u[1]], 1.25, 'b-eye'), circ([hx[0] + pv[0] * 4.2 - u[0], hx[1] + pv[1] * 4.2 - u[1]], 1.25, 'b-eye')];
+    const eo = yo * 4.5, es = 4.2 * ys;
+    face = [circ([hx[0] + pv[0] * (eo - es) - u[0], hx[1] + pv[1] * (eo - es) - u[1]], 1.25, 'b-eye'), circ([hx[0] + pv[0] * (eo + es) - u[0], hx[1] + pv[1] * (eo + es) - u[1]], 1.25, 'b-eye')];
   } else {
     const fwd = fx >= 0 ? 1 : -1, a1 = ua + fwd * 0.75, a2 = ua - fwd * 2.2;
     const HR = R + 2.4, c1 = ua + fwd * 1.15, c2 = ua - fwd * 2.35;
@@ -3365,7 +3388,8 @@ function drawFigure(it, ph){
   if (it.num){ const c = lerp(W.hpR, W.rk, .38);   // Nummer nur auf der Shorts, nicht auf dem Shirt
     it.num.setAttribute('transform', `translate(${F1(c[0])} ${F1(c[1])}) scale(.55)`); }
   // legsFront: Beine vor dem Rumpf zeichnen (Frontansicht im Sitzen, Knie zeigen zum Betrachter)
-  reconcile(P.body, flatA(front && def.legsFront ? [...pelvis, ...torso, ...neckP, ...headP, ...legL, ...legR, ...armL, ...armR]
+  reconcile(P.body, flatA(front && p.ah > .5 ? [...legL, ...legR, ...pelvis, ...torso, ...armL, ...armR, ...neckP, ...headP]   // ah: Arme hinter dem Kopf (z. B. Halo)
+                          : front && def.legsFront ? [...pelvis, ...torso, ...neckP, ...headP, ...legL, ...legR, ...armL, ...armR]
                           : front ? [...legL, ...legR, ...pelvis, ...torso, ...neckP, ...headP, ...armL, ...armR]
                           // af/ab (Seitenansicht): beide Arme vor bzw. hinter dem Körper, z. B. Drehung zur Kamera hin oder von ihr weg
                           : p.af > .5 ? [...legL, ...pelvis, ...torso, ...legR, ...neckP, ...headP, ...armL, ...armR]
