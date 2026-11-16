@@ -599,6 +599,8 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .plan ol{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
 .plan li span{display:block;font-weight:600;line-height:1.25}
 .plan li small{color:var(--muted);font-variant-numeric:tabular-nums}
+.gear-tag{display:inline-block;margin:3px 0 1px;padding:2px 8px;border-radius:5px;background:var(--ice);color:#0b1422;font-family:var(--f-display);font-weight:800;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;line-height:1.4}
+.chips span.gear-chip{background:var(--ice);color:#0b1422;border-color:var(--ice)}
 .challenge{background:var(--glass);border:1px solid var(--gold);border-radius:14px;padding:14px 18px;display:flex;flex-direction:column;gap:4px}
 .challenge > b{font-family:var(--f-display);font-weight:800;font-size:1.5rem;text-transform:uppercase;color:var(--gold)}
 .challenge ul{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px 18px;color:var(--muted)}
@@ -1444,9 +1446,14 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.01';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.01', date:'16.11.2026',
+    neu:['Bei jeder Übung mit Medizinball, Slamball oder Kettlebell steht jetzt das Gewicht (z. B. «Kettlebell 6 kg», «Medizinball 1 kg») – im Trainingsplan, im Aufbau, in der Vorschau, während der Übung und bei «Danach».'],
+    fix:['Übungen mit «1–2 kg» oder «6–8 kg» haben jetzt ein festes Gewicht.',
+         'Medizinball Slam (Sets 5 und 7) läuft mit dem Slamball 2 kg – ein Rebound-Medizinball springt beim Schlagen hoch zurück.',
+         'Geräteliste von Set 29 ergänzt um den Medizinball 1 kg (Rotationswurf).'] },
   { v:'2.0', date:'15.11.2026',
     neu:['Matchstatistik: Bei einem bestätigten Match tragen die Eltern Tore, Assists und Strafen mit Plus und Minus ein.',
          'Tore und Assists geben XP: +20 pro Tor, +15 pro Assist, höchstens 100 pro Match. Strafen sind nur eine Information.',
@@ -1620,13 +1627,13 @@ Object.assign(EXERCISES, {
   shuttle5105:  { anim:'shuttle', name:'5-10-5 Shuttle Run', goal:'Beschleunigung, Reaktion, Agilität', instruction:'Start in der Mitte: 5 m nach links, 10 m nach rechts, 5 m zurück zur Mitte. So schnell wie möglich.', coach:'Hart bremsen, explosiv weiter!' },
   reactiveCones:{ anim:'reactive', name:'Reactive Cone Drill', goal:'Reaktion, Schnelligkeit, Entscheidung', instruction:'Hütchen in verschiedenen Farben verteilen. Bei der angesagten Farbe explosiv hin und zurück in die Mitte.', coach:'Auf das Signal reagieren!', calls:'colors' },
   plankHold:    { anim:'plank', name:'Plank Hold (Unterarmstütz)', goal:'Rumpfstabilität, Körperspannung, Ausdauer', instruction:'Ellbogen unter die Schultern, Körperspannung halten, Rücken gerade, nicht durchhängen.', coach:'Spannung halten, Rücken gerade!' },
-  russianTwist: { anim:'russian', name:'Russian Twist mit Medizinball', goal:'Schräge Bauchmuskeln, Rotation, Stabilität', instruction:'Setz dich hin, Oberkörper leicht nach hinten lehnen, leichten Ball (1–2 kg) ruhig von einer Seite zur anderen drehen.', coach:'Bauch fest, ruhig drehen!' },
+  russianTwist: { anim:'russian', name:'Russian Twist mit Medizinball', gear:'Medizinball 1 kg', goal:'Schräge Bauchmuskeln, Rotation, Stabilität', instruction:'Setz dich hin, Oberkörper leicht nach hinten lehnen, Medizinball (1 kg) ruhig von einer Seite zur anderen drehen.', coach:'Bauch fest, ruhig drehen!' },
   legRaise:     { anim:'legRaise', name:'Leg Raises (Beinheben)', goal:'Untere Bauchmuskeln, Hüftbeuger, Kontrolle', instruction:'Hände unter das Gesäss, Beine anheben und langsam absenken. Unterer Rücken bleibt am Boden – wenn nicht, Knie leicht beugen.', coach:'Langsam absenken!' },
   plankTap:     { anim:'plankTap', name:'Plank mit Schulter-Tap', goal:'Core-Stabilität, Schultern, Koordination', instruction:'Aus dem Liegestütz abwechselnd eine Hand auf die gegenüberliegende Schulter tippen. Hüfte bleibt stabil.', coach:'Hüfte ruhig, kein Wackeln!' },
   wallPush:     { anim:'wallPush', name:'Low Push Drive (Schiebeduell)', goal:'Beinkraft, Körperspannung, Explosivität', instruction:'Stell dich tief hin, schiebe mit beiden Händen gegen die Wand und treibe die Beine an.', coach:'Tief bleiben, Beine treiben!' },
   squatHold:    { anim:'squatHold', name:'Battle Squat Hold', goal:'Beinkraft, Ausdauer, Stabilität', instruction:'Geh in die Hocke, halte die Position tief, Ellbogen gegen die Knie.', coach:'Tief halten, stark bleiben!' },
-  medSlam:      { anim:'slam', name:'Medizinball Slam', goal:'Explosivkraft, Rumpfstabilität, Power', instruction:'Leichten Ball (1–2 kg) über den Kopf heben, kräftig auf den Boden schlagen, aufnehmen und wiederholen. Rücken gerade beim Aufnehmen.', coach:'Volle Power nach unten!' },
-  rumpfRot:     { anim:'russian', name:'Widerstand Rumpfrotation', goal:'Core-Stärke, Rotation, Zweikampfpower', instruction:'Leicht zurücklehnen, Beine anheben, Oberkörper mit Ball von links nach rechts drehen.', coach:'Kontrolliert drehen!' },
+  medSlam:      { anim:'slam', name:'Slamball Slam', gear:'Slamball 2 kg', goal:'Explosivkraft, Rumpfstabilität, Power', instruction:'Slamball (2 kg) über den Kopf heben, kräftig auf den Boden schlagen, aufnehmen und wiederholen. Rücken gerade beim Aufnehmen.', coach:'Volle Power nach unten!' },
+  rumpfRot:     { anim:'russian', name:'Widerstand Rumpfrotation', gear:'Medizinball 1 kg', goal:'Core-Stärke, Rotation, Zweikampfpower', instruction:'Leicht zurücklehnen, Beine anheben, Oberkörper mit dem Medizinball (1 kg) von links nach rechts drehen.', coach:'Kontrolliert drehen!' },
   podTouch:     { anim:'podTouch', name:'Blazepod Reaction (Touch & Move)', goal:'Reaktion, Schnellkraft, Konzentration', instruction:'Die Pods leuchten zufällig auf. Tippe das Licht an und geh zurück in die Grundposition.', coach:'Tief und explosiv!' },
   reactWall:    { anim:'throwCatchRed', name:'Reaktionsball – Wand-Drill', goal:'Hand-Auge, Reaktion, Schnelligkeit', instruction:'Wirf den Reaktionsball gegen die Wand, reagiere auf den unvorhersehbaren Absprung und fange ihn.', coach:'Augen am Ball!' },
   colorCall:    { anim:'reactive', name:'Tennisball – Farben-Call', goal:'Entscheidung, Reaktion, Konzentration', instruction:'Drei Hütchen in verschiedenen Farben. Bei der angesagten Farbe hinspringen, Hütchen berühren, Ball fangen.', coach:'Hören, entscheiden, los!', calls:'rgb' },
@@ -1717,26 +1724,26 @@ Object.assign(EXERCISES, {
   hurdleBox:    { anim:'hurdleBox', name:'Hürde + Box (40 cm)', goal:'Sprungkraft und schnelles Umschalten nach der Landung', instruction:'Beidbeinig über die Mini-Hürde springen, kurz landen und sofort auf die Box springen. Oben leise landen und aufrichten. Immer heruntersteigen, nie herunterspringen. Bei sauberer Landung darf die Box 50 cm hoch sein.', coach:'Kurz landen – und hoch!' },
   pushup14:     { anim:'pushup14', name:'1¼-Liegestütz', goal:'Kraft im Oberkörper für Zweikampf und Schuss', instruction:'Körper in einer Linie. Ganz nach unten, ein Viertel hoch, nochmals ganz nach unten, dann ganz hoch – das ist eine Wiederholung. 4–6 saubere Wiederholungen, bei Bedarf auf den Knien.', coach:'Ganz runter, Viertel hoch, runter, hoch!' },
   pistolBox:    { anim:'pistolBox', name:'Pistol Squat an der Box', goal:'Einbeinige Beinkraft und Balance wie beim Skating', instruction:'Vor der Box (40 cm) auf einem Bein stehen, das andere Bein gestreckt nach vorn, Arme vorn. Langsam auf einem Bein nach unten, kurz auf der Box absitzen und kräftig hochdrücken. 4 pro Bein, die App sagt den Seitenwechsel an.', coach:'Langsam runter, kräftig hoch!' },
-  kbRow:        { anim:'kbRow', name:'Kettlebell-Rudern einarmig', goal:'Starker Rücken und stabile Schultern (statt Klimmzügen)', instruction:'Schrittstellung, Oberkörper nach vorn geneigt, freie Hand auf dem vorderen Knie. Kettlebell (6–8 kg) mit dem Ellbogen nah am Körper zur Hüfte ziehen, kurz halten, langsam ablassen. 8 pro Seite.', coach:'Ellbogen zur Hüfte!' },
+  kbRow:        { anim:'kbRow', name:'Kettlebell-Rudern einarmig', gear:'Kettlebell 8 kg', goal:'Starker Rücken und stabile Schultern (statt Klimmzügen)', instruction:'Schrittstellung, Oberkörper nach vorn geneigt, freie Hand auf dem vorderen Knie. Kettlebell (8 kg) mit dem Ellbogen nah am Körper zur Hüfte ziehen, kurz halten, langsam ablassen. 8 pro Seite.', coach:'Ellbogen zur Hüfte!' },
   cossack:      { anim:'cossack', name:'Cossack Squat', goal:'Beweglichkeit und Kraft in Hüfte und Leiste', instruction:'Sehr breiter Stand. Langsam über ein Bein tief in die Hocke, das andere Bein bleibt gestreckt, Zehen zeigen nach oben. Ferse am Boden lassen. Über die Mitte zur anderen Seite. 4 pro Seite.', coach:'Ferse bleibt unten!' },
   sideHoldBox:  { anim:'sideHoldBox', name:'Seitlicher Halt an der Box', goal:'Leiste und Hüfte geschmeidig machen', instruction:'Einen Fuss auf die tiefe Box oder eine Stufe stellen und tief über dieses Bein in die Hocke gehen. Das andere Bein seitlich gestreckt. Ruhig halten und atmen, die App sagt den Seitenwechsel an.', coach:'Ruhig halten und atmen.' },
-  mbSpider:     { anim:'mbSpider', name:'Spiderman Deadlift mit Medizinball', goal:'Kraft in tiefer Position, Hüfte beweglich', instruction:'Tiefer Ausfallschritt, Medizinball (2 kg) am Boden neben dem vorderen Fuss. Rücken gerade, Ball aufheben und zur Brust bringen, ohne aus dem Ausfallschritt aufzustehen. Wieder ablegen. Nach der Hälfte die Seite wechseln.', coach:'Rücken gerade, tief bleiben!' },
+  mbSpider:     { anim:'mbSpider', name:'Spiderman Deadlift mit Medizinball', gear:'Medizinball 2 kg', goal:'Kraft in tiefer Position, Hüfte beweglich', instruction:'Tiefer Ausfallschritt, Medizinball (2 kg) am Boden neben dem vorderen Fuss. Rücken gerade, Ball aufheben und zur Brust bringen, ohne aus dem Ausfallschritt aufzustehen. Wieder ablegen. Nach der Hälfte die Seite wechseln.', coach:'Rücken gerade, tief bleiben!' },
   bulgarianHold:{ anim:'bulgarianHold', name:'Bulgarian Split Squat Hold', goal:'Kraft und Stabilität im vorderen Bein', instruction:'Hinterer Fuss auf der Box, vorne tief in den Ausfallschritt. Unten halten und die vordere Ferse ganz leicht anheben, so dass das Gewicht auf dem Fussballen liegt. Ruhig atmen, die App sagt den Seitenwechsel an.', coach:'Tief halten, Ferse leicht hoch!' }
 });
 /* ---- Neue Übungen mit den neuen Geräten (Nov. 2026) ---- */
 Object.assign(EXERCISES, {
-  kbGoblet:     { anim:'kbGoblet', name:'Kettlebell Goblet Squat', goal:'Beinkraft und tiefe Skating-Position', instruction:'Kettlebell (6 kg) an den Griffen vor der Brust halten. Füsse schulterbreit, langsam tief in die Hocke, Brust bleibt oben, Knie zeigen über die Zehen. Kräftig hochdrücken.', coach:'Brust hoch, tief runter, kräftig hoch!' },
-  kbDead:       { anim:'kbDead', name:'Kettlebell Kreuzheben', goal:'Hüftkraft für den Skating-Abstoss', instruction:'Kettlebell (8 kg) zwischen den Füssen. Po nach hinten schieben, Rücken gerade, mit gestreckten Armen greifen. Hüfte nach vorn drücken und aufrichten, dann kontrolliert absenken.', coach:'Rücken gerade, Hüfte nach vorn!' },
-  kbFarmer:     { anim:'kbFarmer', name:'Goblet Carry', goal:'Stabiler Rumpf und aufrechte Haltung', instruction:'Eine Kettlebell (8 kg) an den Griffen vor der Brust halten. Aufrecht und mit ruhigen Schritten zwischen zwei Markierungstellern hin und her gehen. Ellbogen nah am Körper, Bauch fest.', coach:'Gross machen, Bauch fest!' },
-  kbSuitcase:   { anim:'kbSuitcase', name:'Suitcase Carry', goal:'Seitliche Rumpfstabilität für Zweikämpfe', instruction:'Eine Kettlebell (6–8 kg) nur in einer Hand tragen und hin und her gehen, ohne zur Seite zu kippen. Nach der Hälfte die Hand wechseln.', coach:'Nicht kippen, ganz gerade bleiben!' },
-  kbHalo:       { anim:'kbHalo', name:'Kettlebell Halo', goal:'Freie Schultern für Schuss und Pass', instruction:'Leichte Kettlebell (4 kg) an den Griffen kopfüber halten und langsam um den Kopf kreisen. Bauch fest, Kopf ruhig. Nach der Hälfte die Richtung wechseln.', coach:'Langsam kreisen, Bauch fest!' },
-  kbSwing:      { anim:'kbSwing', name:'Kettlebell Swing', goal:'Explosive Hüfte', instruction:'Leichte Kettlebell (6 kg) mit beiden Händen. Hüfte nach hinten schieben, Kettlebell zwischen den Beinen nach hinten schwingen, dann die Hüfte explosiv nach vorn strecken. Die Kettlebell schwingt nur bis Brusthöhe – die Kraft kommt aus der Hüfte, nicht aus den Armen.', coach:'Hüfte schnappt nach vorn!' },
-  mbChest:      { anim:'mbChest', name:'Rebound-Brustpass an die Wand', goal:'Explosive Arme für Pass und Check', instruction:'Rebound-Medizinball (2 kg) vor der Brust. Einen Meter vor der Wand stehen, den Ball explosiv an die Wand stossen, fangen und sofort wieder werfen.', coach:'Explosiv stossen, schnell fangen!' },
-  mbRot:        { anim:'mbRot', name:'Rotationswurf an die Wand', goal:'Rumpfkraft für den Schuss', instruction:'Seitlich zur Wand in Schussstellung stehen. Rebound-Ball (1 kg) auf Hüfthöhe nach hinten führen, dann aus Beinen und Hüfte drehen und kräftig an die Wand werfen. Nach der Hälfte die Seite wechseln – wie Vorhand und Rückhand.', coach:'Aus der Hüfte drehen – wie beim Schuss!' },
-  mbOverhead:   { anim:'mbOverhead', name:'Überkopfwurf an die Wand', goal:'Ganzkörper-Power', instruction:'Schrittstellung vor der Wand. Rebound-Ball (1 kg) über den Kopf nach hinten führen und mit dem ganzen Körper kräftig an die Wand werfen. Fangen und wiederholen.', coach:'Der ganze Körper wirft!' },
-  mbSquatThrow: { anim:'mbSquatThrow', name:'Squat-to-Throw', goal:'Sprungkraft und Power-Übertragung', instruction:'Rebound-Ball (2 kg) vor der Brust, tief in die Hocke. Explosiv aufrichten und den Ball hoch an die Wand werfen. Fangen und zurück in die Hocke.', coach:'Tief runter, explodieren!' },
-  slamBall:     { anim:'slam', name:'Slamball Slam', goal:'Explosivkraft und Rumpfspannung', instruction:'Slamball (2 kg) über den Kopf heben, mit dem ganzen Körper kräftig auf den Boden schlagen und wieder aufnehmen. Der Slamball springt nicht zurück – beim Aufheben in die Knie gehen, Rücken gerade.', coach:'Hoch – und mit Power runter!' },
-  slamRot:      { anim:'slam', name:'Slamball Slam mit Rotation', goal:'Rotationskraft für den Schuss', instruction:'Slamball (2 kg) über den Kopf heben und diagonal neben den Fuss schlagen. Seiten abwechseln. Beim Aufheben in die Knie gehen.', coach:'Diagonal und mit Power!' },
+  kbGoblet:     { anim:'kbGoblet', name:'Kettlebell Goblet Squat', gear:'Kettlebell 6 kg', goal:'Beinkraft und tiefe Skating-Position', instruction:'Kettlebell (6 kg) an den Griffen vor der Brust halten. Füsse schulterbreit, langsam tief in die Hocke, Brust bleibt oben, Knie zeigen über die Zehen. Kräftig hochdrücken.', coach:'Brust hoch, tief runter, kräftig hoch!' },
+  kbDead:       { anim:'kbDead', name:'Kettlebell Kreuzheben', gear:'Kettlebell 8 kg', goal:'Hüftkraft für den Skating-Abstoss', instruction:'Kettlebell (8 kg) zwischen den Füssen. Po nach hinten schieben, Rücken gerade, mit gestreckten Armen greifen. Hüfte nach vorn drücken und aufrichten, dann kontrolliert absenken.', coach:'Rücken gerade, Hüfte nach vorn!' },
+  kbFarmer:     { anim:'kbFarmer', name:'Goblet Carry', gear:'Kettlebell 8 kg', goal:'Stabiler Rumpf und aufrechte Haltung', instruction:'Eine Kettlebell (8 kg) an den Griffen vor der Brust halten. Aufrecht und mit ruhigen Schritten zwischen zwei Markierungstellern hin und her gehen. Ellbogen nah am Körper, Bauch fest.', coach:'Gross machen, Bauch fest!' },
+  kbSuitcase:   { anim:'kbSuitcase', name:'Suitcase Carry', gear:'Kettlebell 6 kg', goal:'Seitliche Rumpfstabilität für Zweikämpfe', instruction:'Eine Kettlebell (6 kg) nur in einer Hand tragen und hin und her gehen, ohne zur Seite zu kippen. Nach der Hälfte die Hand wechseln.', coach:'Nicht kippen, ganz gerade bleiben!' },
+  kbHalo:       { anim:'kbHalo', name:'Kettlebell Halo', gear:'Kettlebell 4 kg', goal:'Freie Schultern für Schuss und Pass', instruction:'Leichte Kettlebell (4 kg) an den Griffen kopfüber halten und langsam um den Kopf kreisen. Bauch fest, Kopf ruhig. Nach der Hälfte die Richtung wechseln.', coach:'Langsam kreisen, Bauch fest!' },
+  kbSwing:      { anim:'kbSwing', name:'Kettlebell Swing', gear:'Kettlebell 6 kg', goal:'Explosive Hüfte', instruction:'Leichte Kettlebell (6 kg) mit beiden Händen. Hüfte nach hinten schieben, Kettlebell zwischen den Beinen nach hinten schwingen, dann die Hüfte explosiv nach vorn strecken. Die Kettlebell schwingt nur bis Brusthöhe – die Kraft kommt aus der Hüfte, nicht aus den Armen.', coach:'Hüfte schnappt nach vorn!' },
+  mbChest:      { anim:'mbChest', name:'Rebound-Brustpass an die Wand', gear:'Medizinball 2 kg', goal:'Explosive Arme für Pass und Check', instruction:'Rebound-Medizinball (2 kg) vor der Brust. Einen Meter vor der Wand stehen, den Ball explosiv an die Wand stossen, fangen und sofort wieder werfen.', coach:'Explosiv stossen, schnell fangen!' },
+  mbRot:        { anim:'mbRot', name:'Rotationswurf an die Wand', gear:'Medizinball 1 kg', goal:'Rumpfkraft für den Schuss', instruction:'Seitlich zur Wand in Schussstellung stehen. Rebound-Medizinball (1 kg) auf Hüfthöhe nach hinten führen, dann aus Beinen und Hüfte drehen und kräftig an die Wand werfen. Nach der Hälfte die Seite wechseln – wie Vorhand und Rückhand.', coach:'Aus der Hüfte drehen – wie beim Schuss!' },
+  mbOverhead:   { anim:'mbOverhead', name:'Überkopfwurf an die Wand', gear:'Medizinball 1 kg', goal:'Ganzkörper-Power', instruction:'Schrittstellung vor der Wand. Rebound-Medizinball (1 kg) über den Kopf nach hinten führen und mit dem ganzen Körper kräftig an die Wand werfen. Fangen und wiederholen.', coach:'Der ganze Körper wirft!' },
+  mbSquatThrow: { anim:'mbSquatThrow', name:'Squat-to-Throw', gear:'Medizinball 2 kg', goal:'Sprungkraft und Power-Übertragung', instruction:'Rebound-Medizinball (2 kg) vor der Brust, tief in die Hocke. Explosiv aufrichten und den Ball hoch an die Wand werfen. Fangen und zurück in die Hocke.', coach:'Tief runter, explodieren!' },
+  slamBall:     { anim:'slam', name:'Slamball Slam', gear:'Slamball 2 kg', goal:'Explosivkraft und Rumpfspannung', instruction:'Slamball (2 kg) über den Kopf heben, mit dem ganzen Körper kräftig auf den Boden schlagen und wieder aufnehmen. Der Slamball springt nicht zurück – beim Aufheben in die Knie gehen, Rücken gerade.', coach:'Hoch – und mit Power runter!' },
+  slamRot:      { anim:'slam', name:'Slamball Slam mit Rotation', gear:'Slamball 2 kg', goal:'Rotationskraft für den Schuss', instruction:'Slamball (2 kg) über den Kopf heben und diagonal neben den Fuss schlagen. Seiten abwechseln. Beim Aufheben in die Knie gehen.', coach:'Diagonal und mit Power!' },
   hhHop:        { anim:'hhHop', name:'Mini-Hürden Sprünge beidbeinig', goal:'Sprungkraft und schnelle Bodenkontakte', instruction:'6 Mini-Hürden im Abstand von etwa einem Meter. Beidbeinig über alle Hürden springen, leise auf den Fussballen landen und sofort weiter. Pro Durchgang eine Reihe (6 Sprünge), locker zurückgehen.', coach:'Leise landen, sofort weiter!' },
   hhLat:        { anim:'hhLat', name:'Seitliche Hürdensprünge', goal:'Seitlicher Abstoss wie beim Crossover', instruction:'Neben einer Mini-Hürde stehen und beidbeinig seitlich hin und her springen. Knie leicht gebeugt, Oberkörper ruhig. Höchstens 12 Sprünge pro Durchgang, dann ausschütteln.', coach:'Kurz am Boden, schnell rüber!' },
   hhRun:        { anim:'hhRun', name:'Hürden-Kniehebelauf', goal:'Schnelle Füsse und Kniehub', instruction:'Mit kurzen, schnellen Schritten und hohen Knien durch die 6 Mini-Hürden laufen – ein Fuss pro Zwischenraum. Die Arme arbeiten mit.', coach:'Knie hoch, schnelle Füsse!' },
@@ -1832,7 +1839,7 @@ const SETS = [
     challenge:{ name:'Agility Hero', text:'Schaffe den gesamten Hütchen-Zickzack-Drill (Übung 2) unter 12 Sekunden!', levels:['über 14 Sek.','12–14 Sek.','unter 12 Sek.'] } }),
 
   makeSet({ n:4, load:'mittel', title:'Core Strength', tagline:'Ein starker Core. Ein starker Schuss. Ein starker Spieler!', desc:'Starker Core für Stabilität, Kraftübertragung und Verletzungsprävention.',
-    pillars:['Kraft','Stabilität'], equipment:['Trainings-Matte','Medizinball'], dauer:'25–30',
+    pillars:['Kraft','Stabilität'], equipment:['Trainings-Matte','Rebound-Medizinball 1 kg'], dauer:'25–30',
     warmup:[ W('jog', 30, { name:'Locker laufen' }), W('armkreisen', 30, { cues:[ { at:15, text:'Jetzt rückwärts!' } ] }), W('hueftkreisen', 30, { cues:[ { at:15, text:'Richtung wechseln!' } ] }), W('catcow', 30), W('plankDog', 30) ],
     wTip:'Atme tief durch die Nase ein und durch den Mund aus. Bleib fokussiert!',
     mSub:'Stärke deinen Rumpf. Kontrolliere dein Spiel!',
@@ -1843,7 +1850,7 @@ const SETS = [
     challenge:{ name:'Core Warrior', text:'Halte beide Plank Holds die vollen 90 Sekunden durch – ohne abzusetzen!', levels:['geschafft','mit perfekter Technik','neue Bestzeit'] } }),
 
   makeSet({ n:5, load:'hoch', title:'Battle Strength', tagline:'Gewinne Zweikämpfe. Sei stark. Bleib stabil.', desc:'Zweikampfstärke, Unterkörperkraft und mentale Widerstandsfähigkeit.',
-    pillars:['Kraft'], equipment:['Wand','Medizinball','Trainings-Matte'], dauer:'25–30',
+    pillars:['Kraft'], equipment:['Wand','Rebound-Medizinball 1 kg','Slamball 2 kg','Trainings-Matte'], dauer:'25–30',
     warmup:[ W('jog', 30, { name:'Locker laufen' }), W('kniehebelauf', 30), W('shuffle', 30, { name:'Seitliche Shuffle', sides:true }), W('ausfallRot', 30, S2),
              W('armkreisen', 30, { name:'Armkreisen & Hüftkreisen', cues:[ { at:15, text:'Jetzt Hüftkreisen!', anim:'hueftkreisen' } ] }) ],
     wTip:'Halte deinen Körper aktiv, deine Mitte gespannt und deinen Blick nach vorn!',
@@ -1866,7 +1873,7 @@ const SETS = [
     challenge:{ name:'Reaction Champ', text:'Schaffe alle 5 Übungen mit maximaler Intensität!', levels:['1 Runde stark','2–3 Runden sehr stark','4–5 Runden herausragend'] } }),
 
   makeSet({ n:7, load:'hoch', title:'Explosive Power', tagline:'Explodiere aus dem Stand. Mehr Kraft. Mehr Speed. Mehr du!', desc:'Sprungkraft, Explosivität und Schnellkraft für maximale Höhe.',
-    pillars:['Kraft','Schnelligkeit'], equipment:['Hütchen','Medizinball'], dauer:'35–40',
+    pillars:['Kraft','Schnelligkeit'], equipment:['Hütchen','Slamball 2 kg'], dauer:'35–40',
     warmup:[ W('jog', 30, { name:'Locker laufen' }), W('kniehebelauf', 30, { name:'High Knees' }), W('anfersen', 30, { name:'Butt Kicks' }), W('shuffle', 30, { name:'Seitliche Shuffle', sides:true }), W('ausfallRot', 30) ],
     wTip:'Aktiviere deinen ganzen Körper und bring deinen Kreislauf in Schwung!',
     mSub:'Explodieren. Springen. Beschleunigen. Zeige deine Power!',
@@ -2064,7 +2071,7 @@ const SETS = [
   makeSet({ n:23, isNew:true, load:'hoch', title:'Medball & Slamball Power', tagline:'Mehr Power im Schuss. Mehr Wucht im Zweikampf.', desc:'Explosive Würfe mit Rebound-Medizinball und Slamball für Schuss, Pass und Check.',
     pillars:['Kraft','Schnelligkeit'], equipment:['Rebound-Medizinball 1 kg','Rebound-Medizinball 2 kg','Slamball 2 kg','Wand','Trainings-Matte'], ort:'Home / Garage (feste Wand)', dauer:'30',
     why:'Schuss, Pass und Check entstehen aus Beinen, Hüfte und Rumpf. Die Würfe trainieren genau diese Kraftübertragung – schnell und explosiv, wie auf dem Eis.',
-    warmup:[ W('jog', 30), W('hampelmann', 30), W('armRot', 30), W('ausfallRot', 30, S2), W('hueftkreisen', 30, { cues:[ { at:15, text:'Richtung wechseln!' } ] }), W('mbChest', 20, { name:'Brustpass locker (1 kg)' }) ],
+    warmup:[ W('jog', 30), W('hampelmann', 30), W('armRot', 30), W('ausfallRot', 30, S2), W('hueftkreisen', 30, { cues:[ { at:15, text:'Richtung wechseln!' } ] }), W('mbChest', 20, { name:'Brustpass locker', gear:'Medizinball 1 kg', instruction:'Rebound-Medizinball (1 kg) vor der Brust. Einen Meter vor der Wand stehen, den Ball locker an die Wand stossen und fangen.' }) ],
     wTip:'Schultern und Rumpf gut aufwärmen – gleich wird explosiv geworfen.',
     mSub:'Jeder Wurf mit voller Power. Lieber weniger Würfe, dafür explosiv.',
     main:[ B('mbChest', 20, 3, 90), B('mbRot', 30, 2, 90, S2), B('mbOverhead', 15, 2, 90), B('slamBall', 20, 3, 90),
@@ -2143,7 +2150,7 @@ const SETS = [
     challenge:{ name:'Third Period', text:'Schaffe alle 3 Runden mit sauberer Technik – auch in der letzten Station!', levels:['2 Runden','3 Runden','3 Runden ohne Pause verkürzt'] } }),
 
   makeSet({ n:29, isNew:true, load:'mittel', title:'Off-Ice komplett', tagline:'Dein ganzes Off-Ice-Training – zu Hause.', desc:'Ersatz für das Club-Off-Ice: Speed, Kraft, Ausdauer und Mobility in einer Einheit.',
-    pillars:['Schnelligkeit','Kraft','Ausdauer','Beweglichkeit'], equipment:['Mini-Hürden (6 Stück)','Markierungsteller','Kettlebell 6 kg','Kettlebell 8 kg','Rebound-Medizinball 2 kg','Springseil Velites','Trainings-Matte','Wand'], dauer:'45',
+    pillars:['Schnelligkeit','Kraft','Ausdauer','Beweglichkeit'], equipment:['Mini-Hürden (6 Stück)','Markierungsteller','Kettlebell 6 kg','Kettlebell 8 kg','Rebound-Medizinball 1 kg','Rebound-Medizinball 2 kg','Springseil Velites','Trainings-Matte','Wand'], dauer:'45',
     why:'Wenn du das Off-Ice-Training im Club auslässt, deckt diese Einheit alles ab: Schnelligkeit, Kraft, Ausdauer und Beweglichkeit – in der richtigen Reihenfolge.',
     wSub:'Fussgelenke, Knie und Hüfte gründlich bereit machen!',
     warmup:WARM8(), wTip:'Stell alle Geräte vor dem Start bereit.',
@@ -6045,12 +6052,12 @@ function openBriefing(id){
   preloadClips();
   if (settings.music) Sound.unlock();   // kein Effekt-Ton beim Öffnen einer Mission – Musik läuft weiter bis «Mission starten»
   const m = MISSION, T = buildTimeline(m);
-  const nameOf = st => Object.assign({}, EXERCISES[st.ex], st.o || {}).name;
+  const exOf = st => Object.assign({}, EXERCISES[st.ex], st.o || {}), nameOf = st => exOf(st).name;
   const plan = sec => sec.blocks.map(b => (b.circuit ? `<li><span>Zirkel</span><small>${b.repeat} Runden</small></li>` : '') + b.steps.filter(st => st.kind === 'exercise').map(st => {
     const info = b.circuit ? `${st.maxRound || b.repeat}× ${fmtWork(st.duration)}` : sec.type === 'main' && b.steps.length === 1
       ? `${b.repeat}× ${fmtWork(st.duration)}${b.between ? ' · Pause ' + b.between.duration + ' Sek' : ''}`
       : fmtWork(st.duration) + (b.repeat > 1 && st === b.steps.find(x => x.kind === 'exercise') ? ` · ${b.repeat} Runden` : '');
-    return `<li><span>${nameOf(st)}</span><small>${info}</small></li>`; }).join('')).join('');
+    return `<li><span>${nameOf(st)}</span>${gearTag(exOf(st))}<small>${info}</small></li>`; }).join('')).join('');
   $('screen-briefing').innerHTML = `
   <div class="inner brief">
     <div class="actions brief-top">
@@ -6206,7 +6213,7 @@ function setupPlan(m){
   const groups = [], seen = {};
   m.sections.forEach(sec => sec.blocks.forEach(b => b.steps.forEach(st => {
     if (st.kind !== 'exercise' || !SETUP[st.ex]) return;
-    const k = JSON.stringify(SETUP[st.ex]), name = Object.assign({}, EXERCISES[st.ex], st.o || {}).name;
+    const k = JSON.stringify(SETUP[st.ex]), ex = Object.assign({}, EXERCISES[st.ex], st.o || {}), name = ex.name + (ex.gear ? ' (' + ex.gear + ')' : '');
     if (!seen[k]){ seen[k] = { s:SETUP[st.ex], names:[] }; groups.push(seen[k]); }
     if (seen[k].names.indexOf(name) < 0) seen[k].names.push(name);
   })));
@@ -6275,9 +6282,10 @@ function sectionChip(p){
   const r = (p.rounds > 1 && p.round) ? `<em>Runde ${p.round}/${p.rounds}</em>` : '';
   return `${p.sec.title}${r}`;
 }
+const gearTag = ex => ex && ex.gear ? `<em class="gear-tag">${ex.gear}</em>` : '';   // Gerät mit Gewicht (z. B. Kettlebell 6 kg)
 function nextExerciseName(from){
   const T = Engine.T;
-  for (let j = from + 1; j < T.length; j++) if (T[j].type === 'EXERCISE_RUNNING') return T[j].ex.name;
+  for (let j = from + 1; j < T.length; j++) if (T[j].type === 'EXERCISE_RUNNING') return T[j].ex.name + (T[j].ex.gear ? ' · ' + T[j].ex.gear : '');
   return null;
 }
 function ringHTML(cls, inner){
@@ -6356,7 +6364,7 @@ function onPhaseEnter(p, i, prev){
           <p class="eyebrow">Als Nächstes${p.rounds > 1 ? ` · Durchgang ${p.round}/${p.rounds}` : ''}</p>
           <h1>${p.ex.name}</h1>
           <p class="lead">${p.ex.instruction}</p>
-          <div class="chips"><span>${fmtWork(runDur)}${p.ex.sides ? ' · Seitenwechsel' : ''}</span>${p.rounds > 1 ? `<span>${p.circuit ? 'Zirkel · ' + p.rounds + ' Runden' : p.rounds + ' Durchgänge'}${p.pause ? ' · Pause ' + p.pause + ' Sek' : ''}</span>` : ''}</div>
+          <div class="chips">${p.ex.gear ? `<span class="gear-chip">${p.ex.gear}</span>` : ''}<span>${fmtWork(runDur)}${p.ex.sides ? ' · Seitenwechsel' : ''}</span>${p.rounds > 1 ? `<span>${p.circuit ? 'Zirkel · ' + p.rounds + ' Runden' : p.rounds + ' Durchgänge'}${p.pause ? ' · Pause ' + p.pause + ' Sek' : ''}</span>` : ''}</div>
           ${SETUP[p.key] ? `<div class="su-mini">${setupSVG(SETUP[p.key])}</div>` : ''}
           <p class="trains"><b>Trainiert</b> ${p.ex.goal}</p>
           <div class="prevbar" aria-hidden="true"><span id="prev-bar"></span></div>
@@ -6369,7 +6377,7 @@ function onPhaseEnter(p, i, prev){
     }
     case 'EXERCISE_COUNTDOWN':
       html = `<div class="inner">
-        <p class="eyebrow">${p.ex.name}</p>
+        <p class="eyebrow">${p.ex.name}${p.ex.gear ? ' · ' + p.ex.gear : ''}</p>
         <div class="cd-row"><div class="demo" id="fig"></div><div id="digit-slot"></div></div>
         <p class="lead">${COACH.ready}</p></div>`;
       after = () => Anim.mount($('fig'), p.exId, { still:0 });
@@ -6382,7 +6390,7 @@ function onPhaseEnter(p, i, prev){
         ${ringHTML('', '<div class="figwrap" id="fig"></div>')}
         <div class="side">
           <p class="eyebrow red">Live · ${p.ex.goal}</p>
-          <h2>${p.ex.name}</h2>
+          <h2>${p.ex.name}</h2>${gearTag(p.ex)}
           <p class="secs"><span id="secs"></span><small>Sek</small></p>
           ${hasCap ? '<p class="caption" id="cap"></p>' : ''}
           ${p.ex.calls ? '<p class="callbox" id="callbox" hidden></p>' : ''}
