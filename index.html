@@ -1455,7 +1455,8 @@ const CHANGELOG = [
          '«Plank to Down Dog» heisst jetzt «Liegestütz Plank to Down Dog».',
          'Neues Warm-up (ca. 7 Min.) in allen Missionen ausser Recovery und Mobility: locker einlaufen und Hampelmänner, Mobilität der Wirbelsäule (Katze & Kuh, World’s Greatest Stretch, Hüftkreisen) und Aktivierung (Bird-Dog, Dead Bug, Glute Bridge).',
          'Missionen fordernder: Kraft, Rumpf, Ausdauer und Koordination meist 60 Sekunden pro Übung, Schnelligkeit und Sprünge mit mehr Durchgängen. Die meisten Missionen dauern jetzt 35–40 Minuten.'],
-    fix:['Animationen der Mission «Core Strength» genauer: Katze & Kuh mit rundem Rücken und Hohlkreuz, Russian Twist von der Seite mit Rücklage, Füssen in der Luft und Ball, der mit beiden Armen links und rechts neben der Hüfte auf den Boden tippt, 90/90 Hip Switches von vorne mit festen Füssen, Knien wie ein Scheibenwischer und gestreckten Armen (Hinweis «Knie nach rechts / hoch / nach links»), Seitliche Rumpfdehnung mit Seitenneigung und ruhigem Armwechsel.'] },
+    fix:['Animationen der Mission «Core Strength» genauer: Katze & Kuh mit rundem Rücken und Hohlkreuz, Russian Twist von der Seite mit Rücklage, Füssen in der Luft und Ball, der mit beiden Armen links und rechts neben der Hüfte auf den Boden tippt, 90/90 Hip Switches von vorne mit festen Füssen, Knien wie ein Scheibenwischer und gestreckten Armen (Hinweis «Knie nach rechts / hoch / nach links»), Seitliche Rumpfdehnung mit Seitenneigung und ruhigem Armwechsel.',
+         'Weitere Animationen überarbeitet: Hüftkreisen (Becken kreist, Füsse bleiben stehen), Rotationswurf (beide Hände am Ball), 90/90 Hip Mobility (von vorne), Pigeon Stretch (eigene Animation), Gesäss dehnen (Figure 4 in Rückenlage), Springseil High Knees (von vorne), Schmetterling, Ausschütteln.'] },
   { v:'2.01', date:'16.11.2026',
     neu:['Bei jeder Übung mit Medizinball, Slamball oder Kettlebell steht jetzt das Gewicht (z. B. «Kettlebell 6 kg», «Medizinball 1 kg») – im Trainingsplan, im Aufbau, in der Vorschau, während der Übung und bei «Danach».'],
     fix:['Übungen mit «1–2 kg» oder «6–8 kg» haben jetzt ein festes Gewicht.',
@@ -1617,7 +1618,7 @@ Object.assign(EXERCISES, {
   kindhaltung:  { anim:'childPose', name:'Kindhaltung', goal:'Rücken und Hüfte entspannen', instruction:'Auf die Fersen setzen, Oberkörper auf die Oberschenkel, Arme nach vorne.', coach:'Ganz loslassen.' },
   breathSeat:   { anim:'seatedBreath', name:'Tiefe Atmung', goal:'Erholung', instruction:'Im Schneidersitz sitzen, Augen schliessen. Vier Sekunden ein, vier Sekunden aus.', coach:'Ruhig ein, langsam aus.' },
   seitRumpf:    { anim:'seitbeuge', name:'Seitliche Rumpfdehnung', goal:'Rumpfseite dehnen', instruction:'Einen Arm über den Kopf und sanft zur Seite neigen. Nach der Hälfte wechseln.', coach:'Sanft neigen.' },
-  gesaess:      { anim:'hip9090', name:'Gesäss dehnen (Figure 4)', goal:'Gesäss und Hüfte', instruction:'Im Sitzen einen Fuss über das andere Knie legen, Oberkörper sanft nach vorne. Nach der Hälfte wechseln.', coach:'Sanft nach vorn.' },
+  gesaess:      { anim:'figure4', name:'Gesäss dehnen (Figure 4)', goal:'Gesäss und Hüfte', instruction:'In Rückenlage einen Fuss über das andere Knie legen und den Oberschenkel sanft zur Brust ziehen. Nach der Hälfte wechseln.', coach:'Sanft nach vorn.' },
   brust:        { anim:'chestWall', name:'Brust dehnen', goal:'Brust und Schultern öffnen', instruction:'Unterarm an die Wand, Oberkörper sanft wegdrehen. Nach der Hälfte wechseln.', coach:'Brust öffnen, ruhig atmen.' },
   auslaufen:    { anim:'jog', name:'Lockeres Auslaufen', goal:'Puls beruhigen', instruction:'Ganz locker an Ort traben und langsam leiser werden.', coach:'Langsam runterfahren.' },
 
@@ -1700,9 +1701,9 @@ Object.assign(EXERCISES, {
   bearCrawl:    { anim:'bearCrawl', name:'Bear Crawl Forward & Back', goal:'Schultern, Core, Beine, Koordination', instruction:'Im Vierfüsslerstand mit angehobenen Knien vorwärts und zurück krabbeln. Hüfte tief, Spannung im ganzen Körper.', coach:'Hüfte tief, Spannung!' },
   foamRoll:     { anim:'foamRoll', name:'Foam Roll – ganzer Körper', goal:'Faszien, Durchblutung, Muskelentspannung', instruction:'Waden, Oberschenkel, Gesäss, Rücken und Schultern langsam rollen. Auf verspannten Stellen kurz verweilen.', coach:'Zuerst die Waden. Langsam rollen.',
                   cues:[{ at:60, text:'Jetzt die Oberschenkel.' }, { at:120, text:'Jetzt das Gesäss.' }, { at:180, text:'Jetzt der Rücken.' }, { at:240, text:'Jetzt die Schultern.' }] },
-  mobFlow:      { anim:'hip9090', name:'Dynamischer Mobility Flow', goal:'Beweglichkeit, Hüfte, Rumpfrotation, Knöchel', instruction:'Fliessend nacheinander: 90/90 Hüftwechsel, Ausfallschritt mit Rotation, World’s Greatest Stretch, Ankle Rocks.', coach:'90/90 Hüftwechsel, ganz ruhig.',
+  mobFlow:      { anim:'hipSwitch', name:'Dynamischer Mobility Flow', goal:'Beweglichkeit, Hüfte, Rumpfrotation, Knöchel', instruction:'Fliessend nacheinander: 90/90 Hüftwechsel, Ausfallschritt mit Rotation, World’s Greatest Stretch, Ankle Rocks.', coach:'90/90 Hüftwechsel, ganz ruhig.',
                   cues:[{ at:75, text:'Ausfallschritt mit Rotation.', anim:'lungeRot' }, { at:150, text:'World’s Greatest Stretch.', anim:'wgs' }, { at:225, text:'Ankle Rocks.', anim:'ankleWall' }] },
-  pigeon:       { anim:'hip9090', name:'Pigeon Stretch', goal:'Hüftmobilität, Entspannung', instruction:'Ein Bein vorne angewinkelt, das andere nach hinten gestreckt, Oberkörper sanft nach vorn. Nach der Hälfte wechseln.', coach:'Tief atmen, loslassen.' },
+  pigeon:       { anim:'pigeon', name:'Pigeon Stretch', goal:'Hüftmobilität, Entspannung', instruction:'Ein Bein vorne angewinkelt, das andere nach hinten gestreckt, Oberkörper sanft nach vorn. Nach der Hälfte wechseln.', coach:'Tief atmen, loslassen.' },
   lyingTwist:   { anim:'lyingTwist', name:'Rückenlage Drehung', goal:'Rumpf, Entspannung', instruction:'In Rückenlage die angewinkelten Knie zur Seite sinken lassen, Schultern bleiben am Boden. Nach der Hälfte wechseln.', coach:'Schultern am Boden lassen.' },
   chestDoor:    { anim:'chestWall', name:'Türrahmen-Brustdehnung', goal:'Brust, Haltung', instruction:'Unterarm in den Türrahmen, Oberkörper sanft nach vorne drehen. Nach der Hälfte wechseln.', coach:'Brust öffnen.' },
   hamstring:    { anim:'hamstring', name:'Hamstring Stretch', goal:'Beinrückseite', instruction:'Im Sitzen ein Bein gestreckt, Oberkörper mit geradem Rücken nach vorne Richtung Fuss. Nach der Hälfte wechseln.', coach:'Rücken lang, ruhig atmen.' },
@@ -2373,9 +2374,9 @@ const ANIMS = {
   dehnenLinks:{ view:'side', period:3, keys:[
                  { t:2, ll1:2, ll2:0, rl1:-5, rl2:-165, la1:20, la2:30, ra1:-35, ra2:10 },
                  { t:5, ll1:2, ll2:0, rl1:-12, rl2:-168, la1:30, la2:40, ra1:-40, ra2:5 } ] },
-  schmetterling:{ view:'front', period:2, seated:true, keys:[
-                 { ll1:-95, ll2:100, rl1:95, rl2:-100, la1:-8, la2:5, ra1:8, ra2:-5 },
-                 { ll1:-108, ll2:78, rl1:108, rl2:-78, la1:-8, la2:5, ra1:8, ra2:-5 } ] }
+  schmetterling:{ view:'front', period:2.4, seated:true, legsFront:true, keys:[   // Fusssohlen zusammen, Knie sanft auf und ab
+                 { ll1:-95, ll2:85, rl1:95, rl2:-85, la1:-6, la2:6, ra1:6, ra2:-6 },
+                 { ll1:-122, ll2:60, rl1:122, rl2:-60, la1:-6, la2:6, ra1:6, ra2:-6 } ] }
 };
 ANIMS.dehnenRechts = ANIMS.dehnenLinks;
 Object.assign(ANIMS, {
@@ -2387,8 +2388,8 @@ Object.assign(ANIMS, {
                    { t:4, rl1:70, rl2:-5, ll1:-20, ll2:-80, la1:-40, la2:40, ra1:-40, ra2:40 },
                    { la1:-40, la2:40, ra1:-40, ra2:40 },
                    { t:4, ll1:70, ll2:-5, rl1:-20, rl2:-80, la1:-40, la2:40, ra1:-40, ra2:40 } ] },
-  hueftkreisen:  { view:'front', period:2, fn:ph => { const v = Math.sin(ph * Math.PI * 2);
-                   return { dx:8 * v, t:-6 * v, la1:-60, la2:20, ra1:60, ra2:-20, ll1:-12 - 6.4 * v, ll2:-10 - 6.4 * v, rl1:12 - 6.4 * v, rl2:10 - 6.4 * v }; } },
+  hueftkreisen:  { view:'front', period:2.4, plant:'feet', fn:ph => { const v = Math.sin(ph * Math.PI * 2), c = Math.cos(ph * Math.PI * 2);   // Becken kreist, Füsse bleiben stehen, Oberkörper gleicht aus
+                   return { t:-12 * v, tl:.98 + .02 * c, la1:-60, la2:20, ra1:60, ra2:-20, ll1:-10 - 15 * v, ll2:-10 - 15 * v, rl1:10 - 15 * v, rl2:10 - 15 * v }; } },
   anfersen:      { view:'side', period:.7, bounce:4, keys:[
                    { ll1:-5, ll2:-160, rl1:-3, rl2:-6, la1:-30, la2:30, ra1:30, ra2:110 },
                    { ll1:0, ll2:-4, rl1:0, rl2:-4, la1:0, la2:70, ra1:0, ra2:70 },
@@ -2406,8 +2407,8 @@ Object.assign(ANIMS, {
                    { t:70, dx:8, ll1:-59, ll2:-59, rl1:40, rl2:-75, la1:0, la2:0, ra1:0, ra2:0 },
                    { t:70, dx:8, rl1:-59, rl2:-59, ll1:40, ll2:-75, la1:0, la2:0, ra1:0, ra2:0 } ] },
   ausschuetteln: { view:'front', period:.35, bounce:3, keys:[
-                   { t:-1, la1:-12, la2:-8, ra1:14, ra2:10, ll1:-6, ll2:-3, rl1:4, rl2:2 },
-                   { t:1, la1:-18, la2:-2, ra1:8, ra2:16, ll1:-4, ll2:-5, rl1:6, rl2:4 } ] },
+                   { t:-2, la1:-8, la2:-22, ra1:22, ra2:6, ll1:-6, ll2:-3, rl1:4, rl2:2 },
+                   { t:2, la1:-22, la2:-6, ra1:8, ra2:22, ll1:-4, ll2:-6, rl1:6, rl2:3 } ] },   // Arme und Beine locker ausschütteln
   seitbeuge:     { view:'front', period:7, keys:[
                    { t:-24, bk:-6, la1:-12, la2:-6, ra1:200, ra2:228, ll1:-10, ll2:-8, rl1:10, rl2:8, w:1.4 },
                    { t:-24, bk:-6, la1:-12, la2:-6, ra1:200, ra2:228, ll1:-10, ll2:-8, rl1:10, rl2:8, w:1.4 },
@@ -2492,10 +2493,10 @@ Object.assign(ANIMS, {
                     { la1:-25, la2:-40, ra1:25, ra2:40, ll1:-3, ll2:-1, rl1:3, rl2:1 },
                     { la1:-30, la2:-60, ra1:30, ra2:60, ll1:-3, ll2:-1, rl1:3, rl2:1 } ],
                     props:(J, ph) => X.ropeFront(J, ph, 2) },
-    ropeKnees:    { view:'side', period:.6, bounce:5, keys:[
-                    { t:4, ll1:85, ll2:0, rl1:-8, rl2:-12, la1:20, la2:60, ra1:25, ra2:65 },
-                    { t:4, rl1:85, rl2:0, ll1:-8, ll2:-12, la1:20, la2:60, ra1:25, ra2:65 } ],
-                    props:(J, ph) => X.ropeSide(J, ph, 2) },
+    ropeKnees:    { view:'front', period:.6, bounce:6, keys:[   // von vorne: abwechselnd ein Knie hoch (Oberschenkel zeigt zum Betrachter)
+                    { la1:-28, la2:-50, ra1:28, ra2:50, ll1:-4, lls:.3, ll2:-2, rl1:3, rl2:1 },
+                    { la1:-28, la2:-50, ra1:28, ra2:50, rl1:4, rls:.3, rl2:2, ll1:-3, ll2:-1 } ],
+                    props:(J, ph) => X.ropeFront(J, ph, 2) },
     wadeWand:     { view:'side', period:4, keys:[
                     { t:25, dx:-28, rl1:30, rl2:-5, ll1:-27, ll2:-27, la1:80, la2:85, ra1:82, ra2:87 },
                     { t:29, dx:-28, rl1:34, rl2:-8, ll1:-29, ll2:-29, la1:82, la2:86, ra1:84, ra2:88 } ],
@@ -2616,10 +2617,10 @@ Object.assign(ANIMS, {
                     { t:0, tl:.95, ll1:196, lls:0.64, ll2:-27, lss:0.99, rl1:164, rls:0.64, rl2:27, rss:0.99, la1:35, la2:35, ra1:-35, ra2:-35, las:.42, ras:.42, w:0.7 } ],
                     caption:ph => ph < .12 || ph >= .88 ? 'Knie nach rechts' : ph < .38 ? 'Knie hoch' : ph < .62 ? 'Knie nach links' : 'Knie hoch',
                     props:() => X.mat(50, 190) },
-    hip9090:      { view:'side', period:4, keys:[
-                    { t:-6, dx:-20, rl1:92, rl2:92, ll1:-92, ll2:88, la1:30, la2:15, ra1:40, ra2:20 },
-                    { t:22, dx:-20, rl1:92, rl2:92, ll1:-92, ll2:88, la1:60, la2:40, ra1:70, ra2:50 } ],
-                    props:() => X.mat(30, 215) },
+    hip9090:      { view:'front', period:5, legsFront:true, keys:[   // 90/90-Sitz von vorne, aufrecht, Oberkörper leicht vor und zurück
+                    { t:3, tl:1, ll1:59, lls:0.44, ll2:-87, lss:1.0, rl1:86, rls:0.9, rl2:-51, rss:0.36, la1:-28, la2:-24, ra1:30, ra2:26 },
+                    { t:3, tl:.86, ll1:59, lls:0.44, ll2:-87, lss:1.0, rl1:86, rls:0.9, rl2:-51, rss:0.36, la1:20, la2:40, ra1:40, ra2:60 } ],
+                    props:() => X.mat(50, 190) },
     ankleWall:    { view:'side', period:3, keys:[
                     { t:8, dx:-30, rl1:20, rl2:-5, ll1:-25, ll2:-25, la1:85, la2:88, ra1:83, ra2:86 },
                     { t:12, dx:-30, rl1:45, rl2:-30, ll1:-25, ll2:-28, la1:80, la2:82, ra1:78, ra2:80 } ],
@@ -2734,7 +2735,13 @@ Object.assign(ANIMS, {
     jumpSquat:    { view:'side', period:1.7, plant:'feet', keys:[ { ...jsStand, w:.5 }, { ...jsLoad, w:.85 }, { ...jsTake, w:.22 }, { ...jsPeak, w:.38 }, { ...jsLand, w:.45 }, { ...jsStand, w:.4 } ] },
     ropeBoxer:    { view:'front', period:.55, keys:[ { dx:-3, ll1:-4, ll2:-3, rl1:12, rl2:-8, la1:-25, la2:-40, ra1:25, ra2:40, lift:4 }, { dx:3, rl1:4, rl2:3, ll1:-12, ll2:8, la1:-30, la2:-60, ra1:30, ra2:60, lift:4 } ],
                     props:(J, ph) => X.ropeFront(J, ph, 2) },
-    figure4:      { view:'side', period:6, keys:[ { t:12, ll1:122, ll2:18, rl1:96, rl2:98, la1:58, la2:78, ra1:62, ra2:84 }, { t:32, ll1:122, ll2:18, rl1:96, rl2:98, la1:72, la2:88, ra1:76, ra2:94 } ],
+    figure4:      { view:'side', period:6, keys:[   // Rückenlage: Knöchel aufs andere Knie, Oberschenkel sanft zur Brust ziehen
+                    { t:-90, ll1:198, ll2:90, rl1:135, rls:.7, rl2:245, rss:.8, la1:120, la2:112, ra1:124, ra2:116, w:1.1 },
+                    { t:-90, ll1:212, ll2:100, rl1:150, rls:.7, rl2:255, rss:.8, la1:132, la2:122, ra1:136, ra2:126, w:1.3 } ],
+                    props:() => X.mat(30, 215) },
+    pigeon:       { view:'side', period:6, keys:[   // vorderes Bein angewinkelt, hinteres Bein lang nach hinten, Oberkörper sinkt nach vorne
+                    { t:4, ll1:-92, ll2:-92, rl1:88, rls:.55, rl2:-60, rss:.5, la1:20, la2:10, ra1:24, ra2:12, w:1.1 },
+                    { t:58, ll1:-92, ll2:-92, rl1:88, rls:.55, rl2:-60, rss:.5, la1:110, la2:100, ra1:112, ra2:104, w:1.3 } ],
                     props:() => X.mat(30, 215) }
   });
   ANIMS.boardSquat = { ...ANIMS.boardSquat, plant:'feet', keys:[ { ...sqUp, w:.7 }, { ...sqDown, ll1:84, rl1:82, t:36, w:1.1 }, { ...sqDown, ll1:84, rl1:82, t:36, w:.35 } ] };
@@ -2863,8 +2870,8 @@ Object.assign(ANIMS, {
                   { t:14, dx:-34, ll1:20, ll2:-4, rl1:-18, rl2:-20, la1:115, la2:110, ra1:112, ra2:108 } ],
                   props:(J, ph) => wallBall(J, ph, CX + 58, { a:.4, b:.56, c:.85, hy:J.head[1] - 8, arc:10 }) },
     mbRot:      { view:'front', period:2, keys:[
-                  { t:-3, ll1:-10, ll2:-6, rl1:10, rl2:6, la1:-75, la2:-85, ra1:-35, ra2:-80 },
-                  { t:3, ll1:-10, ll2:-6, rl1:10, rl2:6, la1:35, la2:80, ra1:75, ra2:85 } ],
+                  { t:-6, ll1:-10, ll2:-6, rl1:10, rl2:6, la1:-35, la2:-75, ra1:-40, ra2:-100 },
+                  { t:6, ll1:-10, ll2:-6, rl1:10, rl2:6, la1:60, la2:95, ra1:55, ra2:85 } ],   // beide Hände am Ball: links an der Hüfte ausholen, rechts zur Wand werfen
                   props:(J, ph) => wallBall(J, ph, CX + 74, { a:.42, b:.58, c:.86, arc:8 }) },
     mbSquatThrow:{ view:'side', period:2.2, plant:'feet', keys:[
                   { t:30, ll1:86, ll2:-26, rl1:84, rl2:-28, ...chest, w:.8 },
