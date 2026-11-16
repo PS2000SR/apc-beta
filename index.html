@@ -1446,9 +1446,14 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.01';
+const APP_VERSION = '2.02';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.02', date:'16.11.2026',
+    neu:['Mission «Core Strength» ist fordernder: Plank Hold 120 Sekunden, Russian Twist, Leg Raises und Plank mit Schulter-Tap je 60 Sekunden.',
+         'Warm-up: Einlaufen 60 Sekunden; statt Hüftkreisen neu «90/90 Hip Switches (sitzend)» mit eigener Animation.',
+         '«Plank to Down Dog» heisst jetzt «Liegestütz Plank to Down Dog».'],
+    fix:[] },
   { v:'2.01', date:'16.11.2026',
     neu:['Bei jeder Übung mit Medizinball, Slamball oder Kettlebell steht jetzt das Gewicht (z. B. «Kettlebell 6 kg», «Medizinball 1 kg») – im Trainingsplan, im Aufbau, in der Vorschau, während der Übung und bei «Danach».'],
     fix:['Übungen mit «1–2 kg» oder «6–8 kg» haben jetzt ein festes Gewicht.',
@@ -1594,7 +1599,7 @@ Object.assign(EXERCISES, {
   skipping:     { anim:'kniehebelauf', name:'Skippings', goal:'Fussgelenke aktivieren', instruction:'Kleine, schnelle Schritte auf den Fussballen, Knie leicht anheben.', coach:'Schnell und leicht!' },
   mobilisation: { anim:'wgs', name:'Mobilisation', goal:'Ganzkörper-Beweglichkeit', instruction:'Ausfallschritt, eine Hand zum Boden, den anderen Arm nach oben aufdrehen. Seiten abwechseln.', coach:'Weit öffnen, ruhig atmen.' },
   catcow:       { anim:'catcow', name:'Cat & Cow', goal:'Wirbelsäule mobilisieren', instruction:'Vierfüsslerstand. Rücken abwechselnd rund machen und sanft durchhängen lassen.', coach:'Langsam mit dem Atem bewegen.' },
-  plankDog:     { anim:'plankDog', name:'Plank to Down Dog', goal:'Schultern und Beinrückseite', instruction:'Aus dem Liegestütz das Becken hochschieben, Fersen Richtung Boden, dann zurück in den Plank.', coach:'Langsam und kontrolliert.' },
+  plankDog:     { anim:'plankDog', name:'Liegestütz Plank to Down Dog', goal:'Schultern und Beinrückseite', instruction:'Aus dem Liegestütz das Becken hochschieben, Fersen Richtung Boden, dann zurück in den Plank.', coach:'Langsam und kontrolliert.' },
   beinpendel:   { anim:'beinpendel', name:'Beinpendel vor/zur Seite', goal:'Hüfte öffnen', instruction:'Auf einem Bein stehen, das andere locker vor und zurück pendeln. Nach der Hälfte wechseln.', coach:'Locker pendeln, aufrecht bleiben.' },
   askip:        { anim:'kniehebelauf', name:'A-Skip', goal:'Laufkoordination', instruction:'Hüpfend vorwärts, Knie hoch, Fuss aktiv unter den Körper setzen, Arme gegengleich.', coach:'Knie hoch, aktiv aufsetzen!' },
   ropeEasy:     { anim:'rope', name:'Springseil locker', goal:'Rhythmus finden', instruction:'Locker auf den Fussballen springen, die Handgelenke drehen das Seil.', coach:'Locker im Rhythmus.' },
@@ -1662,6 +1667,7 @@ Object.assign(EXERCISES, {
   tennisToss:   { anim:'throwCatch', name:'Tennisball – Toss & Catch', goal:'Koordination, Gleichgewicht, Beidseitigkeit', instruction:'Gegen die Wand werfen und fangen. Nach 15 Sekunden die andere Hand. Leicht und rhythmisch.', coach:'Locker und rhythmisch!',
                   cues:[{ at:15, text:'Andere Hand!' }, { at:30, text:'Wieder wechseln!' }] },
   wgs:          { anim:'wgs', name:"World's Greatest Stretch Flow", goal:'Hüftbeuger, Brustwirbelsäule, Rotation', instruction:'Ausfallschritt nach vorne, Ellbogen innen zum Boden, dann nach oben aufdrehen und öffnen. Nach der Hälfte Seite wechseln.', coach:'Weit öffnen, ruhig atmen.' },
+  hipSwitch:    { anim:'hipSwitch', name:'90/90 Hip Switches (sitzend)', goal:'Hüfte mobilisieren, Innen- und Aussenrotation', instruction:'Aufrecht sitzen, Beine in der 90/90-Position, Hände hinten abstützen. Beide Knie anheben und zur anderen Seite ablegen – ruhig hin und her wechseln.', coach:'Brust hoch, Knie ruhig umlegen!' },
   hip9090:      { anim:'hip9090', name:'90/90 Hip Mobility', goal:'Hüfte, Aussenrotatoren, Beweglichkeit', instruction:'In die 90/90-Position setzen, aufrecht bleiben, leicht vor- und zurückneigen. Nach der Hälfte Seite wechseln.', coach:'Brust stolz, aufrecht!' },
   ankleWall:    { anim:'ankleWall', name:'Ankle Mobility an der Wand', goal:'Sprunggelenke, Dorsalflexion, Stabilität', instruction:'Fuss 10 bis 15 cm vor die Wand, Knie nach vorne zur Wand schieben, Ferse bleibt am Boden. Nach der Hälfte wechseln.', coach:'Ferse bleibt unten!' },
   hurdleWalk:   { anim:'hurdleWalk', name:'Mini-Hürden Mobility Walk', goal:'Hüftmobilität, Koordination, Schrittlänge', instruction:'Langsam über die Mini-Hürden gehen, Knie anheben und Hüfte öffnen. Schritt für Schritt kontrolliert.', coach:'Knie hoch, Hüfte öffnen.' },
@@ -1840,14 +1846,14 @@ const SETS = [
 
   makeSet({ n:4, load:'mittel', title:'Core Strength', tagline:'Ein starker Core. Ein starker Schuss. Ein starker Spieler!', desc:'Starker Core für Stabilität, Kraftübertragung und Verletzungsprävention.',
     pillars:['Kraft','Stabilität'], equipment:['Trainings-Matte','Rebound-Medizinball 1 kg'], dauer:'25–30',
-    warmup:[ W('jog', 30, { name:'Locker laufen' }), W('armkreisen', 30, { cues:[ { at:15, text:'Jetzt rückwärts!' } ] }), W('hueftkreisen', 30, { cues:[ { at:15, text:'Richtung wechseln!' } ] }), W('catcow', 30), W('plankDog', 30) ],
+    warmup:[ W('jog', 60, { name:'Locker laufen' }), W('armkreisen', 30, { cues:[ { at:15, text:'Jetzt rückwärts!' } ] }), W('hipSwitch', 30), W('catcow', 30), W('plankDog', 30) ],
     wTip:'Atme tief durch die Nase ein und durch den Mund aus. Bleib fokussiert!',
     mSub:'Stärke deinen Rumpf. Kontrolliere dein Spiel!',
-    main:[ Z(B('plankHold', 90, 2, 15), B('russianTwist', 30, 3, 40), B('legRaise', 30, 3, 40), B('plankTap', 30, 3, 30)) ],
+    main:[ Z(B('plankHold', 120, 2, 15), B('russianTwist', 60, 3, 40), B('legRaise', 60, 3, 40), B('plankTap', 60, 3, 30)) ],
     tip:'Qualität vor Geschwindigkeit! Saubere Ausführung ist das Ziel!',
     cooldown:[ W('kindhaltung', 20), W('hueftbeuger', 40, S2), W('ruecken', 20), W('seitRumpf', 40, S2), W('breathSeat', 60) ],
     cTip:'Stolz auf dich! Dein Core macht dich auf dem Eis stärker!',
-    challenge:{ name:'Core Warrior', text:'Halte beide Plank Holds die vollen 90 Sekunden durch – ohne abzusetzen!', levels:['geschafft','mit perfekter Technik','neue Bestzeit'] } }),
+    challenge:{ name:'Core Warrior', text:'Halte beide Plank Holds die vollen 120 Sekunden durch – ohne abzusetzen!', levels:['geschafft','mit perfekter Technik','neue Bestzeit'] } }),
 
   makeSet({ n:5, load:'hoch', title:'Battle Strength', tagline:'Gewinne Zweikämpfe. Sei stark. Bleib stabil.', desc:'Zweikampfstärke, Unterkörperkraft und mentale Widerstandsfähigkeit.',
     pillars:['Kraft'], equipment:['Wand','Rebound-Medizinball 1 kg','Slamball 2 kg','Trainings-Matte'], dauer:'25–30',
@@ -2567,6 +2573,12 @@ Object.assign(ANIMS, {
                     { t:70, dx:-6, rl1:80, rl2:-5, ll1:-55, ll2:-55, la1:0, la2:0, ra1:100, ra2:100 },
                     { t:70, dx:-6, rl1:80, rl2:-5, ll1:-55, ll2:-55, la1:0, la2:0, ra1:178, ra2:180 },
                     { t:70, dx:-6, rl1:80, rl2:-5, ll1:-55, ll2:-55, la1:0, la2:0, ra1:178, ra2:180 } ],
+                    props:() => X.mat(30, 215) },
+    hipSwitch:    { view:'side', period:3.2, keys:[
+                    { t:-12, dx:-20, rl1:92, rl2:92, ll1:-92, ll2:88, la1:-40, la2:-40, ra1:-40, ra2:-40, w:1.2 },
+                    { t:-16, dx:-20, rl1:150, rl2:20, ll1:-150, ll2:-20, la1:-40, la2:-40, ra1:-40, ra2:-40, w:.8 },
+                    { t:-12, dx:-20, rl1:268, rl2:88, ll1:-268, ll2:92, la1:-40, la2:-40, ra1:-40, ra2:-40, w:1.2 },
+                    { t:-16, dx:-20, rl1:150, rl2:20, ll1:-150, ll2:-20, la1:-40, la2:-40, ra1:-40, ra2:-40, w:.8 } ],
                     props:() => X.mat(30, 215) },
     hip9090:      { view:'side', period:4, keys:[
                     { t:-6, dx:-20, rl1:92, rl2:92, ll1:-92, ll2:88, la1:30, la2:15, ra1:40, ra2:20 },
