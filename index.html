@@ -1453,7 +1453,7 @@ const CHANGELOG = [
     neu:['Mission «Core Strength» ist fordernder: Plank Hold 120 Sekunden, Russian Twist, Leg Raises und Plank mit Schulter-Tap je 60 Sekunden.',
          'Warm-up: Einlaufen 60 Sekunden; statt Hüftkreisen neu «90/90 Hip Switches (sitzend)» mit eigener Animation.',
          '«Plank to Down Dog» heisst jetzt «Liegestütz Plank to Down Dog».'],
-    fix:['Animationen der Mission «Core Strength» genauer: Katze & Kuh mit rundem Rücken und Hohlkreuz, Russian Twist von vorne mit Ball von Seite zu Seite, 90/90 Hip Switches von vorne mit Hinweis «Knie nach rechts / hoch / nach links», Seitliche Rumpfdehnung mit Seitenneigung und ruhigem Armwechsel.'] },
+    fix:['Animationen der Mission «Core Strength» genauer: Katze & Kuh mit rundem Rücken und Hohlkreuz, Russian Twist von der Seite mit Rücklage, Füssen in der Luft und Ball, der mit beiden Armen links und rechts neben der Hüfte auf den Boden tippt, 90/90 Hip Switches von vorne mit festen Füssen, Knien wie ein Scheibenwischer und gestreckten Armen (Hinweis «Knie nach rechts / hoch / nach links»), Seitliche Rumpfdehnung mit Seitenneigung und ruhigem Armwechsel.'] },
   { v:'2.01', date:'16.11.2026',
     neu:['Bei jeder Übung mit Medizinball, Slamball oder Kettlebell steht jetzt das Gewicht (z. B. «Kettlebell 6 kg», «Medizinball 1 kg») – im Trainingsplan, im Aufbau, in der Vorschau, während der Übung und bei «Danach».'],
     fix:['Übungen mit «1–2 kg» oder «6–8 kg» haben jetzt ein festes Gewicht.',
@@ -2332,8 +2332,8 @@ const COACH = {
    2. ÜBUNGS-ANIMATIONEN – Strichfigur als Daten (Gelenkwinkel)
    Winkel in Grad, 0 = nach unten, positiv = nach rechts/vorne.
    ===================================================================== */
-const BASE_SIDE  = { bk:0, hd:0, lls:1, lss:1, rls:1, rss:1, t:2, la1:6, la2:10, ra1:-6, ra2:4, ll1:3, ll2:0, rl1:-3, rl2:0, dx:0, lift:0, tl:1, fx:1 };
-const BASE_FRONT = { bk:0, hd:0, lls:1, lss:1, rls:1, rss:1, t:0, la1:-10, la2:-6, ra1:10, ra2:6, ll1:-5, ll2:-3, rl1:5, rl2:3, dx:0, lift:0, tl:1, fx:1 };
+const BASE_SIDE  = { af:0, ab:0, bk:0, hd:0, las:1, ras:1, lls:1, lss:1, rls:1, rss:1, t:2, la1:6, la2:10, ra1:-6, ra2:4, ll1:3, ll2:0, rl1:-3, rl2:0, dx:0, lift:0, tl:1, fx:1 };
+const BASE_FRONT = { af:0, ab:0, bk:0, hd:0, las:1, ras:1, lls:1, lss:1, rls:1, rss:1, t:0, la1:-10, la2:-6, ra1:10, ra2:6, ll1:-5, ll2:-3, rl1:5, rl2:3, dx:0, lift:0, tl:1, fx:1 };
 const ANIMS = {
   hampelmann: { view:'front', period:.9, bounce:12, keys:[ {}, { la1:-165, la2:-172, ra1:165, ra2:172, ll1:-22, ll2:-20, rl1:22, rl2:20 } ] },
   armkreisen: { view:'front', period:1.1, fn:ph => { const a = ph * Math.PI * 2, s = Math.sin(a) * 16, c = Math.cos(a) * 14;
@@ -2500,12 +2500,15 @@ Object.assign(ANIMS, {
                     props:() => X.mat(30, 215) },
     plankTap:     { view:'side', period:1.3, keys:[ plankUp, { ...plankUp, t:71, ra1:60, ra2:-120 }, plankUp, { ...plankUp, t:71, la1:60, la2:-120 } ],
                     props:() => X.mat(30, 215) },
-    russian:      { view:'front', period:2.4, keys:[
-                    { t:-8, tl:.9, ll1:-142, ll2:-8, rl1:142, rl2:8, la1:-40, la2:-75, ra1:-35, ra2:-100, w:1.2 },
-                    { t:0, tl:.9, ll1:-142, ll2:-8, rl1:142, rl2:8, la1:10, la2:-10, ra1:-10, ra2:10, w:.8 },
-                    { t:8, tl:.9, ll1:-142, ll2:-8, rl1:142, rl2:8, la1:35, la2:100, ra1:40, ra2:75, w:1.2 },
-                    { t:0, tl:.9, ll1:-142, ll2:-8, rl1:142, rl2:8, la1:10, la2:-10, ra1:-10, ra2:10, w:.8 } ],
-                    props:J => { const h = X.mid(J.lh, J.rh); return X.mat(50, 190) + X.ball(h[0], h[1], 'med', 8); } },
+    russian:      { view:'side', period:2.8, keys:[
+                    { t:-42, af:1, dx:-6, ll1:140, ll2:52, rl1:135, rl2:50, la1:44, la2:120, ra1:50, ra2:124 },
+                    { t:-36, af:1, dx:-6, ll1:140, ll2:52, rl1:135, rl2:50, la1:20, la2:54, ra1:22, ra2:56 },
+                    { t:-42, af:1, dx:-6, ll1:140, ll2:52, rl1:135, rl2:50, la1:44, la2:120, ra1:50, ra2:124 },
+                    { t:-36, ab:1, dx:-6, ll1:140, ll2:52, rl1:135, rl2:50, la1:12, la2:48, ra1:14, ra2:50 } ],
+                    caption:ph => ph < .125 || (ph >= .375 && ph < .625) || ph >= .875 ? 'Mitte' : ph < .5 ? 'Drehen nach links' : 'Drehen nach rechts',
+                    // Ball auf Brusthöhe: bei «links» vor dem Körper (zur Kamera), bei «rechts» hinter dem Körper
+                    props:(J, ph) => { const h = X.mid(J.lh, J.rh); return X.mat(50, 190) + (Math.abs(ph - .75) < .13 ? X.ball(h[0], Math.min(h[1] + 3, GROUND - 7), 'med', 8) : ''); },
+                    over:(J, ph) => { const h = X.mid(J.lh, J.rh); return Math.abs(ph - .75) < .13 ? '' : X.ball(h[0], Math.min(h[1] + 3, GROUND - 7), 'med', 8); } },   // Ball tippt seitlich auf den Boden
     legRaise:     { view:'side', period:2.6, keys:[
                     { t:-90, ll1:88, ll2:88, rl1:86, rl2:86, la1:90, la2:90, ra1:92, ra2:92 },
                     { t:-90, ll1:170, ll2:172, rl1:168, rl2:170, la1:90, la2:90, ra1:92, ra2:92 } ],
@@ -2582,12 +2585,12 @@ Object.assign(ANIMS, {
                     { t:70, dx:-6, rl1:80, rl2:-5, ll1:-55, ll2:-55, la1:0, la2:0, ra1:178, ra2:180 },
                     { t:70, dx:-6, rl1:80, rl2:-5, ll1:-55, ll2:-55, la1:0, la2:0, ra1:178, ra2:180 } ],
                     props:() => X.mat(30, 215) },
-    hipSwitch:    { view:'front', period:3.4, keys:[
-                    { t:-6, ll1:60, lls:.3, ll2:90, lss:1, rl1:90, rls:1, rl2:10, rss:.35, la1:-35, la2:-30, ra1:35, ra2:30, w:1.2 },
-                    { t:0, ll1:218, lls:.8, ll2:-12, lss:.85, rl1:142, rls:.8, rl2:12, rss:.85, la1:-35, la2:-30, ra1:35, ra2:30, w:.8 },
-                    { t:6, ll1:270, lls:1, ll2:-10, lss:.35, rl1:300, rls:.3, rl2:-90, rss:1, la1:-35, la2:-30, ra1:35, ra2:30, w:1.2 },
-                    { t:0, ll1:218, lls:.8, ll2:-12, lss:.85, rl1:142, rls:.8, rl2:12, rss:.85, la1:-35, la2:-30, ra1:35, ra2:30, w:.8 } ],
-                    caption:ph => ph < .15 || ph >= .85 ? 'Knie nach rechts' : ph < .35 ? 'Knie hoch' : ph < .65 ? 'Knie nach links' : 'Knie hoch',
+    hipSwitch:    { view:'front', period:4, legsFront:true, keys:[
+                    { t:6, tl:.95, ll1:59, lls:0.44, ll2:-87, lss:1.0, rl1:86, rls:0.9, rl2:-51, rss:0.36, la1:80, la2:88, ra1:95, ra2:92, las:.85, ras:1, w:1.3 },
+                    { t:0, tl:.95, ll1:196, lls:0.64, ll2:-27, lss:0.99, rl1:164, rls:0.64, rl2:27, rss:0.99, la1:35, la2:35, ra1:-35, ra2:-35, las:.42, ras:.42, w:0.7 },
+                    { t:-6, tl:.95, ll1:274, lls:0.9, ll2:51, lss:0.36, rl1:301, rls:0.44, rl2:87, rss:1.0, la1:-95, la2:-92, ra1:-80, ra2:-88, las:1, ras:.85, w:1.3 },
+                    { t:0, tl:.95, ll1:196, lls:0.64, ll2:-27, lss:0.99, rl1:164, rls:0.64, rl2:27, rss:0.99, la1:35, la2:35, ra1:-35, ra2:-35, las:.42, ras:.42, w:0.7 } ],
+                    caption:ph => ph < .12 || ph >= .88 ? 'Knie nach rechts' : ph < .38 ? 'Knie hoch' : ph < .62 ? 'Knie nach links' : 'Knie hoch',
                     props:() => X.mat(50, 190) },
     hip9090:      { view:'side', period:4, keys:[
                     { t:-6, dx:-20, rl1:92, rl2:92, ll1:-92, ll2:88, la1:30, la2:15, ra1:40, ra2:20 },
@@ -3257,8 +3260,9 @@ function drawFigure(it, ph){
   // hd: Kopf nicken (Grad, relativ zum Rumpf) – z. B. Kopf senken bei «Katze», heben bei «Kuh»
   const uh = p.hd ? [S(p.t + p.hd), -C(p.t + p.hd)] : u;
   const head = off(neck, uh, BODY.neck + BODY.headR);
-  const le = seg(shL, p.la1, SEG.ua), lh = seg(le, p.la2, SEG.fa);
-  const re = seg(shR, p.ra1, SEG.ua), rh = seg(re, p.ra2, SEG.fa);
+  // las/ras: Arme verkürzt zeichnen, wenn sie zum Betrachter zeigen (z. B. Arme nach vorne gestreckt in der Frontansicht)
+  const le = seg(shL, p.la1, SEG.ua * (p.las || 1)), lh = seg(le, p.la2, SEG.fa * (p.las || 1));
+  const re = seg(shR, p.ra1, SEG.ua * (p.ras || 1)), rh = seg(re, p.ra2, SEG.fa * (p.ras || 1));
   // lls/lss/rls/rss: Ober-/Unterschenkel verkürzt zeichnen, wenn sie zum Betrachter zeigen (Tiefe, z. B. Sitzen in der Frontansicht)
   const lk = seg(hpL, p.ll1, SEG.th * (p.lls || 1)), la = seg(lk, p.ll2, SEG.sh * (p.lss || 1));
   const rk = seg(hpR, p.rl1, SEG.th * (p.rls || 1)), ra = seg(rk, p.rl2, SEG.sh * (p.rss || 1));
@@ -3325,7 +3329,12 @@ function drawFigure(it, ph){
   const armL = arm(W.shL, W.le, W.lh, true), armR = arm(W.shR, W.re, W.rh, false);
   if (it.num){ const c = lerp(W.hpR, W.rk, .38);   // Nummer nur auf der Shorts, nicht auf dem Shirt
     it.num.setAttribute('transform', `translate(${F1(c[0])} ${F1(c[1])}) scale(.55)`); }
-  reconcile(P.body, flatA(front ? [...legL, ...legR, ...pelvis, ...torso, ...neckP, ...headP, ...armL, ...armR]
+  // legsFront: Beine vor dem Rumpf zeichnen (Frontansicht im Sitzen, Knie zeigen zum Betrachter)
+  reconcile(P.body, flatA(front && def.legsFront ? [...pelvis, ...torso, ...neckP, ...headP, ...legL, ...legR, ...armL, ...armR]
+                          : front ? [...legL, ...legR, ...pelvis, ...torso, ...neckP, ...headP, ...armL, ...armR]
+                          // af/ab (Seitenansicht): beide Arme vor bzw. hinter dem Körper, z. B. Drehung zur Kamera hin oder von ihr weg
+                          : p.af > .5 ? [...legL, ...pelvis, ...torso, ...legR, ...neckP, ...headP, ...armL, ...armR]
+                          : p.ab > .5 ? [...armL, ...armR, ...legL, ...pelvis, ...torso, ...legR, ...neckP, ...headP]
                           : [...armL, ...legL, ...pelvis, ...torso, ...legR, ...neckP, ...headP, ...armR]));
   P.shadow.setAttribute('cx', F1(W.hip[0])); P.shadow.setAttribute('rx', F1(Math.max(18, 40 - p.lift * 0.8)));
   if (def.props){
@@ -3334,6 +3343,7 @@ function drawFigure(it, ph){
     J.sole = Math.max(J.lsole, J.rsole);
     const html = def.props(J, ph);
     if (P.props._h !== html){ P.props.innerHTML = html; P.props._h = html; }
+    if (def.over && P.over){ const oh = def.over(J, ph); if (P.over._h !== oh){ P.over.innerHTML = oh; P.over._h = oh; } }   // z. B. Ball vor dem Körper
   }
   if (it.cap && def.caption){ const c = def.caption(ph); if (it.cap.textContent !== c) it.cap.textContent = c; }
 }
@@ -3347,7 +3357,7 @@ const Anim = {
       <g${def.tilt ? ` transform="rotate(${def.tilt} ${CX} ${GROUND + 2})"` : ''}>
       ${def.noGround ? '' : `<line class="f-ground" x1="${def.tilt ? -60 : 30}" y1="${GROUND + 2}" x2="${def.tilt ? 300 : 210}" y2="${GROUND + 2}"/>`}
       <ellipse class="f-shadow" cx="120" cy="${GROUND + 2}" rx="40" ry="4"${def.noGround ? ' style="display:none"' : ''}/>
-      <g data-p="props"></g><g data-p="body"></g></g></svg>`;   // Avatar ohne Nummer auf Shirt und Hose
+      <g data-p="props"></g><g data-p="body"></g><g data-p="over"></g></g></svg>`;   // Avatar ohne Nummer auf Shirt und Hose
     const svg = host.firstElementChild, parts = {};
     svg.querySelectorAll('[data-p]').forEach(n => { parts[n.dataset.p] = n; });
     parts.shadow = svg.querySelector('.f-shadow');
