@@ -1446,9 +1446,12 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.02';
+const APP_VERSION = '2.03';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.03', date:'17.11.2026',
+    neu:[],
+    fix:['Battle Squat Hold (Mission «Battle Strength») neu von der Seite: tiefe Hocke, der Slamball 2 kg wird mit beiden Händen vor der Brust gehalten und ist jetzt sichtbar, Ellbogen an den Knien.'] },
   { v:'2.02', date:'16.11.2026',
     neu:['Mission «Core Strength» ist fordernder: Plank Hold 120 Sekunden, Russian Twist, Leg Raises und Plank mit Schulter-Tap je 60 Sekunden.',
          'Warm-up: Einlaufen 60 Sekunden; statt Hüftkreisen neu «90/90 Hip Switches (sitzend)» mit eigener Animation.',
@@ -1641,7 +1644,7 @@ Object.assign(EXERCISES, {
   legRaise:     { anim:'legRaise', name:'Leg Raises (Beinheben)', goal:'Untere Bauchmuskeln, Hüftbeuger, Kontrolle', instruction:'Hände unter das Gesäss, Beine anheben und langsam absenken. Unterer Rücken bleibt am Boden – wenn nicht, Knie leicht beugen.', coach:'Langsam absenken!' },
   plankTap:     { anim:'plankTap', name:'Plank mit Schulter-Tap', goal:'Core-Stabilität, Schultern, Koordination', instruction:'Aus dem Liegestütz abwechselnd eine Hand auf die gegenüberliegende Schulter tippen. Hüfte bleibt stabil.', coach:'Hüfte ruhig, kein Wackeln!' },
   wallPush:     { anim:'wallPush', name:'Low Push Drive (Schiebeduell)', goal:'Beinkraft, Körperspannung, Explosivität', instruction:'Stell dich tief hin, schiebe mit beiden Händen gegen die Wand und treibe die Beine an.', coach:'Tief bleiben, Beine treiben!' },
-  squatHold:    { anim:'squatHold', name:'Battle Squat Hold', goal:'Beinkraft, Ausdauer, Stabilität', instruction:'Geh in die Hocke, halte die Position tief, Ellbogen gegen die Knie.', coach:'Tief halten, stark bleiben!' },
+  squatHold:    { anim:'squatHold', name:'Battle Squat Hold', gear:'Slamball 2 kg', goal:'Beinkraft, Ausdauer, Stabilität', instruction:'Slamball (2 kg) mit beiden Händen vor der Brust halten. Geh tief in die Hocke, halte die Position, Ellbogen an den Knien, Brust bleibt oben.', coach:'Tief halten, stark bleiben!' },
   medSlam:      { anim:'slam', name:'Slamball Slam', gear:'Slamball 2 kg', goal:'Explosivkraft, Rumpfstabilität, Power', instruction:'Slamball (2 kg) über den Kopf heben, kräftig auf den Boden schlagen, aufnehmen und wiederholen. Rücken gerade beim Aufnehmen.', coach:'Volle Power nach unten!' },
   rumpfRot:     { anim:'russian', name:'Widerstand Rumpfrotation', gear:'Medizinball 1 kg', goal:'Core-Stärke, Rotation, Zweikampfpower', instruction:'Leicht zurücklehnen, Beine anheben, Oberkörper mit dem Medizinball (1 kg) von links nach rechts drehen.', coach:'Kontrolliert drehen!' },
   podTouch:     { anim:'podTouch', name:'Blazepod Reaction (Touch & Move)', goal:'Reaktion, Schnellkraft, Konzentration', instruction:'Die Pods leuchten zufällig auf. Tippe das Licht an und geh zurück in die Grundposition.', coach:'Tief und explosiv!' },
@@ -2550,9 +2553,12 @@ Object.assign(ANIMS, {
                     { t:50, dx:-42, la1:95, la2:95, ra1:97, ra2:97, ll1:-30, ll2:-35, rl1:35, rl2:-15 },
                     { t:50, dx:-42, la1:95, la2:95, ra1:97, ra2:97, rl1:-30, rl2:-35, ll1:35, ll2:-15 } ],
                     props:J => X.wall(J.rh[0] + 4) },
-    squatHold:    { view:'front', period:3, keys:[
-                    { ll1:-62, ll2:-8, rl1:62, rl2:8, la1:-35, la2:40, ra1:35, ra2:-40 },
-                    { ll1:-62, ll2:-8, rl1:62, rl2:8, la1:-35, la2:40, ra1:35, ra2:-40, tl:1.03 } ] },
+    // Battle Squat Hold von der Seite: tiefe Hocke halten, Slamball mit beiden Händen vor der Brust, Ellbogen an den Knien
+    squatHold:    { view:'side', period:3.4, plant:'feet', keys:[
+                    { t:24, dx:-10, ll1:92, ll2:-26, rl1:89, rl2:-29, la1:24, la2:150, ra1:21, ra2:147 },
+                    { t:22, dx:-10, ll1:92, ll2:-26, rl1:89, rl2:-29, la1:23, la2:148, ra1:20, ra2:145, tl:1.03 } ],
+                    over:J => { const h = X.mid(J.lh, J.rh); return X.ball(h[0] + 1, h[1] + 7, 'med', 10); },
+                    props:() => '' },
     slam:         { view:'side', period:1.5, keys:[
                     { t:-5, dx:-14, la1:170, la2:175, ra1:172, ra2:176 },
                     { t:45, dx:-14, ll1:40, ll2:-15, rl1:38, rl2:-17, la1:20, la2:15, ra1:22, ra2:17 } ],
