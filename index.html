@@ -649,6 +649,9 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .p-ball{stroke:none}
 .p-ball.tennis{fill:var(--tennis)} .p-ball.red{fill:var(--red)} .p-ball.med{fill:var(--bronze-d)}
 .p-mat{fill:var(--blue);opacity:.35}
+.p-parm{stroke:#8b95a5;stroke-width:10;stroke-linecap:round;fill:none} .p-phand{fill:#8b95a5;stroke:#5d6675;stroke-width:1.5}
+.p-meter{fill:var(--line)} .p-meterfill{fill:var(--gold)} .p-mtxt{fill:var(--muted);font:700 9px var(--f-display, sans-serif);letter-spacing:.08em;text-transform:uppercase}
+.p-push{stroke:var(--ice);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;fill:none} .p-tense{stroke:var(--gold);stroke-width:3.5;stroke-linecap:round}
 .p-board{fill:var(--bronze)}
 .p-roller{fill:var(--line);stroke:var(--muted);stroke-width:2}
 .p-pod{fill:var(--panel-2);stroke:var(--muted);stroke-width:2}
@@ -1446,9 +1449,15 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.03';
+const APP_VERSION = '2.1';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.1', date:'18.11.2026',
+    neu:['Neue Zusatz-Mission «Neck Express» (ca. 13 Min.) für über Mittag: Nackentraining mit einem Elternteil als Partner – Partner drückt, du hältst dagegen. Kopf in 6 Richtungen, Wegdrücken im Kniestand und im Hockey-Stand, Check-Anspannen nach Handsignal.',
+         'Dazu «Neck Express Solo» für Tage ohne Partner: Chin Tuck Hold, Hand-Isometrie in 6 Richtungen, Kopf heben in Bauch- und Seitlage, Prone Y-T-W.',
+         'Beide geben +20 XP, zählen aber nicht für Wochenziel, Tages-Quest, Saison und Profikarten und werden nicht automatisch vorgeschlagen. Neue Abzeichen «Neck Armor» (4 Wochen in Folge je 2×) und «Neck Armor Pro» (8 Wochen).',
+         'Neue Animationen mit Partner-Hand und Druckbalken; Partner-Regeln stehen im Briefing.'],
+    fix:[] },
   { v:'2.03', date:'17.11.2026',
     neu:[],
     fix:['Battle Squat Hold (Mission «Battle Strength») neu von der Seite: tiefe Hocke, Oberschenkel etwa parallel zum Boden, der Slamball 2 kg wird mit leicht angewinkelten Armen vor dem Körper gehalten und ist jetzt sichtbar.'] },
@@ -1585,6 +1594,8 @@ const BADGES = [
   { id:'champion',  name:'Meister',                 tier:'gold',   glyph:'shield',desc:'Eine Saison als Meister abgeschlossen.',                         rule:{ type:'champion', n:1 } },
   { id:'m25',       name:'Assistenzkapitän',        tier:'silver', glyph:'#25',   desc:'25 Missionen abgeschlossen.',                                    rule:{ type:'missions', n:25 } },
   { id:'cardsAll',  name:'Komplettes Album',        tier:'gold',   glyph:'cards', desc:'Alle Profikarten gesammelt.',                                    rule:{ type:'cards', n:PROS.length } },
+  { id:'neck4',     name:'Neck Armor',              tier:'silver', glyph:'shield',desc:'4 Wochen in Folge je 2× «Neck Express».',                     rule:{ type:'neckStreak', n:4 } },
+  { id:'neck8',     name:'Neck Armor Pro',          tier:'gold',   glyph:'shield',desc:'8 Wochen in Folge je 2× «Neck Express».',                     rule:{ type:'neckStreak', n:8 } },
   { id:'weeks4',    name:'Saisonform',              tier:'gold',   glyph:'trend', desc:'4 Wochen in Folge mit je mindestens 2 Trainings.',               rule:{ type:'weekStreak', n:4 } },
   { id:'goal1',     name:'Erstes Tor',              tier:'bronze', glyph:'puck',  desc:'Erstes Tor in einem Club-Match.',                                rule:{ type:'goals', n:1 } },
   { id:'assist1',   name:'Vorlagengeber',           tier:'bronze', glyph:'trend2',desc:'Erster Assist in einem Club-Match.',                             rule:{ type:'assists', n:1 } },
@@ -1780,6 +1791,33 @@ Object.assign(EXERCISES, {
   matAdductor:  { anim:'schmetterling', name:'Adduktoren dehnen (Schmetterling)', goal:'Leiste – beim Skating stark belastet', instruction:'Auf der Trainings-Matte sitzen, Fusssohlen zusammen, die Knie sanft nach unten sinken lassen. Rücken lang.', coach:'Locker lassen, ruhig atmen.' },
   matOpenBook:  { anim:'lyingTwist', name:'Open Book', goal:'Brustwirbelsäule für Schuss und Rotation', instruction:'Seitlich auf der Matte liegen, Knie angewinkelt, Arme gestreckt vor dem Körper. Den oberen Arm wie ein Buch nach hinten aufklappen, der Blick folgt der Hand. Nach der Hälfte die Seite wechseln.', coach:'Langsam aufklappen, ausatmen.' }
 });
+/* ---- Nacken: Neck Express mit Partner (Set 35) und Solo (Set 36) ---- */
+Object.assign(EXERCISES, {
+  nkTuck:     { anim:'nkTuck', name:'Chin Tucks im Stehen', goal:'Tiefe Halsmuskeln aufwecken', instruction:'Aufrecht stehen, Blick nach vorne. Kinn waagrecht nach hinten schieben (Doppelkinn), kurz halten und lösen. Ruhig und ohne Schwung.', coach:'Doppelkinn – und lösen.' },
+  nkTilt:     { anim:'nkTilt', name:'Kopf neigen und drehen', goal:'Nacken sanft mobilisieren', instruction:'Kopf langsam zur Seite neigen, Ohr Richtung Schulter, dann zur anderen Seite. Danach den Kopf langsam nach links und rechts drehen. Nie ruckartig, nicht nach hinten kreisen.', coach:'Ganz langsam.' },
+  wallAngel:  { anim:'wallAngel', name:'Wall Angels', goal:'Oberer Rücken und Schulterblätter', instruction:'Rücken, Hinterkopf und Arme an die Wand. Die Arme langsam nach oben schieben und wieder zurück, ohne dass die Arme die Wand verlassen.', coach:'Arme bleiben an der Wand.' },
+  nkStretch:  { anim:'nkStretch', name:'Nacken seitlich dehnen', goal:'Nacken lösen', instruction:'Aufrecht stehen oder sitzen, Ohr sanft Richtung Schulter sinken lassen und halten. Die Schultern bleiben unten. Nach der Hälfte die Seite wechseln.', coach:'Sanft halten, ruhig atmen.' },
+  npHead:     { anim:'npHeadF', name:'Partner drückt, du hältst – 6 Richtungen', goal:'Ganze Halsmuskulatur: vorne, hinten, seitlich, Drehung',
+                instruction:'Aufrechter Kniestand, Kopf gerade, leichtes Doppelkinn. Der Partner legt die flache Hand an und baut den Druck in 2 Sekunden auf. Du hältst dagegen, der Kopf bewegt sich nicht. Nach 10 Sekunden langsam lösen. Nie an Kinn, Gesicht oder Hals drücken, keine Stösse am Kopf.',
+                coach:'Stirn – halten!', cues:[ { at:10, text:'Hinterkopf – halten!', anim:'npHeadB' }, { at:20, text:'Kopfseite links!', anim:'npHeadL' },
+                  { at:30, text:'Kopfseite rechts!', anim:'npHeadR' }, { at:40, text:'Drehung links – Hand an der Schläfe!', anim:'npHeadRL' }, { at:50, text:'Drehung rechts!', anim:'npHeadRR' } ] },
+  npKneel:    { anim:'npKneel', name:'Wegdrücken im Kniestand', goal:'Rumpf, Schultergürtel und Kopfkontrolle',
+                instruction:'Aufrechter Kniestand auf der Matte, Bauch fest. Der Partner drückt langsam und unregelmässig gegen Brust, Rücken und Schultern. Du bleibst stabil, der Kopf bleibt über dem Körper.', coach:'Stabil bleiben!' },
+  npStance:   { anim:'npStance', name:'Wegdrücken im Hockey-Stand', goal:'Reaktive Stabilität für Checks',
+                instruction:'Hockey-Grundposition, Knie gebeugt, Kopf hoch. Der Partner gibt kurze, unerwartete Stösse an Schultern und Oberarme – von vorne, seitlich und schräg hinten. Fang jeden Stoss ab, ohne einen Schritt zu machen. Stösse nie an den Kopf.', coach:'Abfangen, kein Schritt!' },
+  npCheck:    { anim:'npCheck', name:'Check-Anspannen', goal:'Timing: anspannen vor dem Kontakt',
+                instruction:'Hockey-Grundposition, Blick nach vorne. Der Partner zeigt kurz die Hand, dann folgt ein kräftiger Druck seitlich an die Schulter. Beim Signal Nacken und Rumpf anspannen, Kinn leicht einziehen und stabil bleiben. 6 Wiederholungen, dann die Seite wechseln.',
+                coach:'Signal – anspannen!', cues:[ { at:22, text:'Andere Seite!', anim:'npCheckL' } ] },
+  nkChinHold: { anim:'nkChinHold', name:'Chin Tuck Hold in Rückenlage', goal:'Tiefe Halsbeuger (vorne am Hals)', instruction:'Rückenlage, Knie angewinkelt. Zuerst Doppelkinn machen, dann den Kopf nur 2 cm von der Matte abheben und halten. Kinn nicht nach vorne schieben, ruhig weiteratmen.', coach:'Doppelkinn, Kopf knapp über der Matte.' },
+  nkIso:      { anim:'nkIsoF', name:'Hand-Isometrie – 6 Richtungen', goal:'Ganze Halsmuskulatur: vorne, hinten, seitlich, Drehung',
+                instruction:'Aufrecht stehen. Die Hand an Stirn, Hinterkopf, Kopfseiten und Schläfen legen. Der Kopf drückt gegen die Hand, die Hand hält dagegen – nichts bewegt sich. Kraft langsam aufbauen und langsam lösen, Luft nicht anhalten.',
+                coach:'Stirn – drücken und halten!', cues:[ { at:10, text:'Hinterkopf!', anim:'nkIsoB' }, { at:20, text:'Kopfseite links!', anim:'nkIsoL' },
+                  { at:30, text:'Kopfseite rechts!', anim:'nkIsoR' }, { at:40, text:'Drehung links – Hand an der Schläfe!', anim:'nkIsoRL' }, { at:50, text:'Drehung rechts!', anim:'nkIsoRR' } ] },
+  nkProne:    { anim:'nkProne', name:'Kopf heben in Bauchlage', goal:'Nackenstrecker (hinten am Hals)', instruction:'Bauchlage, Stirn auf der Matte, Arme neben dem Körper. Doppelkinn halten und den Kopf wenige Zentimeter anheben, 2 Sekunden halten, langsam ablegen. Blick bleibt zur Matte.', coach:'Blick zur Matte, Doppelkinn!' },
+  nkSide:     { anim:'nkSide', name:'Kopf heben in Seitlage', goal:'Seitliche Halsmuskulatur', instruction:'Seitlage, Beine leicht angewinkelt. Den Kopf langsam seitlich anheben, Ohr Richtung obere Schulter, kurz halten und langsam ablegen. Kopf nicht nach vorne kippen oder drehen. Nach der Hälfte die Seite wechseln.',
+                coach:'Ohr zur oberen Schulter.', cues:[ { at:30, text:'Andere Seite!', anim:'nkSideB' } ] },
+  nkYTW:      { anim:'nkYTW', name:'Prone Y-T-W', goal:'Oberer Rücken und Schulterblätter', instruction:'Bauchlage, Stirn knapp über der Matte, Doppelkinn. Die Arme in Y-, T- und W-Form vom Boden abheben, Daumen zeigen nach oben, Schulterblätter nach hinten unten ziehen. Kopf nicht in den Nacken legen.', coach:'Y – T – W, Daumen hoch!' }
+});
 /* =====================================================================
    ÜBUNGSSETS – Phase 1 · Athletic Foundation · Block 1
    Aufbau aus den Übungsset-Grafiken: Warm-up, Hauptteil (Durchgänge + Pause), Cool-down.
@@ -1814,10 +1852,10 @@ function makeSet(o){
   return {
     id, n:o.n, label:'Übungsset ' + o.n, title:o.title, tagline:o.tagline || '', description:o.desc, desc:o.desc,
     load:o.load || 'mittel', pillars:o.pillars || [], equipment:o.equipment || [], ort:o.ort || 'Home / Garage', dauer:o.dauer || '',
-    why:o.why || null, challenge:o.challenge || null, isNew:!!o.isNew, tip:o.tip || null, playable:o.playable !== false,
+    why:o.why || null, challenge:o.challenge || null, isNew:!!o.isNew, addon:!!o.addon, tip:o.tip || null, playable:o.playable !== false,
     demo: firstMain ? animOf(firstMain) : 'jog',
     greeting:`Hallo ${PROFILE.name}! Übungsset ${o.n}: ${o.title}. Bereit?`,
-    goal:o.desc, completionXP:100, previewSeconds:6, previewRepeatSeconds:4, countdownSeconds:3,
+    goal:o.desc, completionXP:o.xp || 100, previewSeconds:6, previewRepeatSeconds:4, countdownSeconds:3,
     sections: o.playable === false ? [] : [
       { id:'warmup', type:'warmup', title:'Warm-up', subtitle:o.wSub || 'Mach deinen Körper bereit!', music:'warmup',
         coachIntro:'Warm-up. ' + (o.wSub || 'Mach deinen Körper bereit!'), tip:o.wTip, blocks:[ { repeat:1, steps:o.warmup } ] },
@@ -2254,8 +2292,42 @@ const SETS = [
     cSub:'Zur Ruhe kommen.',
     cooldown:[ W('ausschuetteln', 20), W('atmenStand', 60, { name:'Tief durchatmen' }) ],
     cTip:'Gut erholt! Jetzt viel trinken, gut essen und früh schlafen.',
-    challenge:{ name:'Easy Walk', text:'Bleib den ganzen Spaziergang so locker, dass du dabei reden könntest!', levels:['Spaziergang','dazu alle Dehnungen','alles ohne Auslassen'] } })
+    challenge:{ name:'Easy Walk', text:'Bleib den ganzen Spaziergang so locker, dass du dabei reden könntest!', levels:['Spaziergang','dazu alle Dehnungen','alles ohne Auslassen'] } }),
+  /* Zusatz-Missionen über Mittag (ADDON_IDS): eigene XP, zählen nicht für Wochenziel, Saison und Rotation */
+  makeSet({ n:35, isNew:true, addon:true, xp:20, load:'niedrig', title:'Neck Express', tagline:'Starker Nacken. Sicherer an der Bande.',
+    desc:'Kurzes Nackentraining über Mittag mit einem Elternteil als Partner: Der Partner drückt, du hältst dagegen.',
+    pillars:['Kraft','Stabilität'], equipment:['Trainings-Matte'], dauer:'13', ort:'Zuhause · mit Partner',
+    why:'Ein kräftiger Nacken hält den Kopf bei Stürzen und Bandenchecks stabiler. Partner-Regeln: Am Kopf nur mit der flachen Hand an Stirn, Hinterkopf oder Kopfseite drücken – nie an Kinn, Gesicht oder Hals – und den Druck immer langsam aufbauen und langsam lösen. Kurze Stösse nur an Schulter, Oberarm und Oberkörper. Der Spieler bestimmt die Kraft: Daumen hoch = mehr, flache Hand = weniger, Faust = sofort stoppen. Wochen 1–2 mit halber Kraft. 2–3× pro Woche, nicht an Matchtagen.',
+    wSub:'Nacken und Schultern sanft vorbereiten.',
+    warmup:[ W('armkreisen', 30, { name:'Arm- und Schulterkreisen' }), W('nkTuck', 30), W('nkTilt', 40), W('wallAngel', 30) ],
+    wTip:'Langsam und ohne Schwung – der Nacken mag keine Ruckbewegungen.',
+    mSub:'Partner drückt – du hältst dagegen.',
+    main:[ { repeat:2, between:RF(60), proAfter:true, steps:[ W('npHead', 60), W('npKneel', 30), W('npStance', 30), W('npCheck', 44) ] } ],
+    tip:'Faust = sofort stoppen. Bei Schmerz, Schwindel oder Kribbeln in den Armen aufhören und im Feedback melden.',
+    cSub:'Nacken lösen und ruhig atmen.',
+    cooldown:[ W('nkStretch', 40, { cues:[ { at:20, text:'Andere Seite!', anim:'nkStretchR' } ] }), W('breathSeat', 40) ],
+    cTip:'Stark! Ein starker Nacken schützt dich an der Bande.',
+    challenge:{ name:'Neck Armor', text:'Bei allen 6 Richtungen bleibt der Kopf ganz ruhig – ohne Stopp-Zeichen!', levels:['geschafft','Kopf immer ruhig','2 Einheiten diese Woche'] } }),
+
+  makeSet({ n:36, isNew:true, addon:true, xp:20, load:'niedrig', title:'Neck Express Solo', tagline:'Starker Nacken – auch ohne Partner.',
+    desc:'Kurzes Nackentraining über Mittag ohne Partner: Halteübungen mit der eigenen Hand und Kopfheben auf der Matte.',
+    pillars:['Kraft','Stabilität'], equipment:['Trainings-Matte'], dauer:'15', ort:'Zuhause · allein',
+    why:'Die Solo-Version von «Neck Express» für Tage ohne Partner. Ein kräftiger Nacken hält den Kopf bei Stürzen und Bandenchecks stabiler. Alles langsam und ohne Schwung, nie bis zur Erschöpfung. Wochen 1–2 mit halber Kraft. 2–3× pro Woche, nicht an Matchtagen.',
+    wSub:'Nacken und Schultern sanft vorbereiten.',
+    warmup:[ W('armkreisen', 30, { name:'Arm- und Schulterkreisen' }), W('nkTuck', 30), W('nkTilt', 40), W('wallAngel', 30) ],
+    wTip:'Langsam und ohne Schwung – der Nacken mag keine Ruckbewegungen.',
+    mSub:'Halten, heben, kontrollieren.',
+    main:[ { repeat:2, between:RF(60), proAfter:true, steps:[ W('nkChinHold', 30), W('nkIso', 60), W('nkProne', 40), W('nkSide', 60), W('nkYTW', 45) ] } ],
+    tip:'Bei Schmerz, Schwindel oder Kribbeln in den Armen aufhören und im Feedback melden.',
+    cSub:'Nacken lösen und ruhig atmen.',
+    cooldown:[ W('nkStretch', 40, { cues:[ { at:20, text:'Andere Seite!', anim:'nkStretchR' } ] }), W('breathSeat', 40) ],
+    cTip:'Stark! Ein starker Nacken schützt dich an der Bande.',
+    challenge:{ name:'Neck Armor Solo', text:'Chin Tuck Hold beide Male die vollen 30 Sekunden halten!', levels:['geschafft','ohne Absetzen','2 Einheiten diese Woche'] } })
+
 ];
+const ADDON_IDS = SETS.filter(m => m.addon).map(m => m.id);   // Zusatz-Missionen (Neck Express)
+const isAddonId = id => ADDON_IDS.includes(id);
+const mainLog = log => (log || []).filter(e => !isAddonId(e.mission));
 const MISSIONS = SETS.filter(m => m.playable);
 const LOAD_TXT = { hoch:'Hoch', mittel:'Mittel', niedrig:'Niedrig' };
 const LOAD_NOTE = {
@@ -3183,6 +3255,137 @@ function fixAudio(){
 }
 function currentMode(){ return !Engine.active && MUSIC_SCREENS.has(curScreen) ? 'calm' : 'off'; }   // Musik auf den Menü-Ebenen
 
+/* ---- Nacken (Set 35 «Neck Express» mit Partner, Set 36 «Neck Express Solo») ----
+   Partner = graue Hand mit Arm von ausserhalb des Bildes. Am Kopf nur langsam aufgebauter Druck (Druckbalken),
+   kurze Stösse nur an Schulter, Oberarm und Oberkörper. */
+(() => {
+  const DG = Math.PI / 180;   // eigene Konstante: DEG ist hier noch nicht definiert
+  const ikN = (S, T, out) => { const dx = T[0] - S[0], dy = T[1] - S[1]; const d = Math.max(6, Math.min(53, Math.hypot(dx, dy)));
+    const phi = Math.atan2(dx, dy) / DG, al = Math.acos(Math.max(-1, Math.min(1, (28 * 28 + d * d - 26 * 26) / (2 * 28 * d)))) / DG;
+    const a1 = phi + out * al, E = [S[0] + Math.sin(a1 * DG) * 28, S[1] + Math.cos(a1 * DG) * 28];
+    return [a1, Math.atan2(T[0] - E[0], T[1] - E[1]) / DG]; };
+  const clamp01 = v => Math.max(0, Math.min(1, v));
+  const ease = v => { v = clamp01(v); return v * v * (3 - 2 * v); };
+  const seg01 = (ph, a, b) => ease((ph - a) / (b - a));
+  // Partnerhand: (tx,ty) Kontaktpunkt, (dx,dy) Druckrichtung (vom Partner zum Spieler), k = 1 Kontakt, 0 weit weg
+  const pHand = (tx, ty, dx, dy, k) => { const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+    const g = 7.5 + (1 - k) * 30, c = [tx - dx * g, ty - dy * g], e = [c[0] - dx * 150, c[1] - dy * 150 - 10];
+    return `<line class="p-parm" x1="${f1(e[0])}" y1="${f1(e[1])}" x2="${f1(c[0] - dx * 5)}" y2="${f1(c[1] - dy * 5)}"/>` +
+      `<circle class="p-phand" cx="${f1(c[0])}" cy="${f1(c[1])}" r="7.5"/>`; };
+  const meter = (v, label) => `<text class="p-mtxt" x="16" y="22">${label || 'Druck'}</text><rect class="p-meter" x="16" y="27" width="64" height="7" rx="3.5"/>` +
+    `<rect class="p-meterfill" x="16" y="27" width="${f1(Math.max(0, 64 * v))}" height="7" rx="3.5"/>`;
+  const arrow = (x1, y1, x2, y2) => { const a = Math.atan2(y2 - y1, x2 - x1), h = 6;
+    return `<line class="p-push" x1="${f1(x1)}" y1="${f1(y1)}" x2="${f1(x2)}" y2="${f1(y2)}"/>` +
+      `<path class="p-push" d="M${f1(x2 - h * Math.cos(a - .5))} ${f1(y2 - h * Math.sin(a - .5))} L${f1(x2)} ${f1(y2)} L${f1(x2 - h * Math.cos(a + .5))} ${f1(y2 - h * Math.sin(a + .5))}"/>`; };
+  const tense = J => { const h = J.head, n = J.neck;
+    return `<line class="p-tense" x1="${f1(h[0] - 6)}" y1="${f1(h[1] + 11)}" x2="${f1(n[0] - 12)}" y2="${f1(n[1] + 3)}"/>` +
+      `<line class="p-tense" x1="${f1(h[0] + 6)}" y1="${f1(h[1] + 11)}" x2="${f1(n[0] + 12)}" y2="${f1(n[1] + 3)}"/>` +
+      `<line class="p-tense" x1="${f1(J.hip[0] - 9)}" y1="${f1(J.hip[1] - 18)}" x2="${f1(J.hip[0] + 9)}" y2="${f1(J.hip[1] - 18)}"/>`; };
+  // Isometrie-Ablauf (Periode 5 s): Hand kommt, Druck langsam aufbauen, halten, langsam lösen, Hand weg
+  const isoK = ph => ph < .06 ? ease(ph / .06) : ph < .9 ? 1 : 1 - ease((ph - .9) / .1);
+  const isoP = ph => ph < .06 ? 0 : ph < .26 ? seg01(ph, .06, .26) : ph < .8 ? 1 : ph < .9 ? 1 - seg01(ph, .8, .9) : 0;
+  const isoCap = (lab, ph) => `${lab} · ` + (ph < .26 ? 'Druck langsam aufbauen' : ph < .8 ? 'Halten – Kopf bleibt ruhig' : 'Langsam lösen');
+
+  // Grundposen
+  const kneelS = { t:0, ll1:2, ll2:-88, rl1:-2, rl2:-92, la1:6, la2:22, ra1:2, ra2:18 };                       // aufrechter Kniestand, Seitenansicht
+  const kneelF = { t:0, ll1:-14, ll2:-14, lss:.04, rl1:14, rl2:14, rss:.04, la1:-12, la2:-2, ra1:12, ra2:2 };       // aufrechter Kniestand, von vorne
+  const standS = { t:1, ll1:2, ll2:0, rl1:-2, rl2:0, la1:4, la2:8, ra1:-2, ra2:4 };
+  const standF = { ll1:-5, ll2:-3, rl1:5, rl2:3, la1:-10, la2:-6, ra1:10, ra2:6 };
+  const stanceS = { t:25, ll1:30, ll2:-15, rl1:20, rl2:-20, la1:30, la2:60, ra1:30, ra2:60 };                   // Hockey-Grundposition
+  const stanceF = { t:0, ll1:-24, ll2:-8, rl1:24, rl2:8, lls:.9, rls:.9, la1:-26, la2:34, ra1:26, ra2:-34 };
+
+  // Partner drückt am Kopf: Ziel relativ zum Kopf, Druckrichtung
+  const headPress = (base, view, lab, off, dir, yaw) => ({ view, period:5, clip:true, fn:() => (yaw ? { ...base, yaw } : base),
+    caption:ph => isoCap(lab, ph), props:() => X.mat(60, 180),
+    over:(J, ph) => pHand(J.head[0] + off[0], J.head[1] + off[1], dir[0], dir[1], isoK(ph)) + meter(isoP(ph)) +
+      (isoP(ph) > .3 ? arrow(J.head[0] - dir[0] * 4, J.head[1] - 22, J.head[0] - dir[0] * 20, J.head[1] - 22) : '') });
+
+  // Eigene Hand am Kopf (Solo): Schulter relativ zur Hüfte, Ziel relativ zur Hüfte (Kopfmitte bei [0, -67])
+  const selfIso = (view, lab, side, T, out, extra) => { const S = view === 'front' ? [side * 11, -50] : [0, -47];
+    const A = ikN(S, T, out), arm = side < 0 ? { la1:A[0], la2:A[1] } : { ra1:A[0], ra2:A[1] };
+    return { view, period:5, fn:() => ({ ...(view === 'front' ? standF : standS), ...arm, ...(extra || {}) }),
+      caption:ph => isoCap(lab, ph), props:() => '',
+      over:(J, ph) => meter(isoP(ph), 'Kopf drückt') + (isoP(ph) > .3 ? arrow(J.head[0], J.head[1] - 24, J.head[0] + (T[0] > 0 ? 18 : -18), J.head[1] - 24) : '') }; };
+
+  // Liegen: Kopf heben (hd), die Figur bleibt dabei liegen (lift gleicht aus, dass der Kopf nicht mehr der tiefste Punkt ist)
+  const headLift = (base, hd, w) => { const lift = 17 * Math.sin(Math.abs(hd) * DG);
+    return [ { ...base, w:w[0] }, { ...base, hd, lift, w:w[1] }, { ...base, hd, lift, w:w[2] }, { ...base, w:w[3] } ]; };
+  const supine = { t:-90, ll1:140, ll2:15, rl1:138, rl2:13, la1:90, la2:90, ra1:92, ra2:92 };
+  const prone  = { t:90, ll1:-90, ll2:-90, rl1:-92, rl2:-92, la1:-86, la2:-86, ra1:-88, ra2:-88 };
+  const sideLie = { t:90, ll1:-78, ll2:-100, rl1:-82, rl2:-104, la1:-96, la2:-60, ra1:-70, ra2:-96 };
+  const liftCap = (a, b, c) => ph => ph < .3 ? a : ph < .7 ? b : c;
+
+  Object.assign(ANIMS, {
+    // --- Warm-up und Cool-down ---
+    nkTuck:     { view:'side', period:3, keys:[ { ...standS, w:1 }, { ...standS, hd:10, w:1.4 }, { ...standS, w:.6 } ],
+                  caption:ph => ph < .3 ? 'Gerade stehen' : ph < .8 ? 'Doppelkinn – Kinn nach hinten' : 'Lösen' },
+    nkTilt:     { view:'front', period:8, keys:[ { ...standF, w:.6 }, { ...standF, hd:-30, w:1.2 }, { ...standF, w:.6 }, { ...standF, hd:30, w:1.2 } ],
+                  caption:ph => ph < .1 || (ph >= .45 && ph < .55) ? 'Kopf gerade' : ph < .5 ? 'Ohr langsam zur Schulter' : 'Zur anderen Seite' },
+    wallAngel:  { view:'front', period:4, keys:[ { ...standF, la1:-92, la2:-178, ra1:92, ra2:178, w:1 }, { ...standF, la1:-158, la2:-166, ra1:158, ra2:166, w:1 } ],
+                  caption:ph => ph < .5 ? 'Arme hoch schieben' : 'Ellbogen zurück nach unten' },
+    nkStretch:  { view:'front', period:6, keys:[ { ...standF, hd:-30 }, { ...standF, hd:-34, tl:1.01 } ], caption:() => 'Ohr sanft Richtung Schulter, halten' },
+    nkStretchR: { view:'front', period:6, keys:[ { ...standF, hd:30 }, { ...standF, hd:34, tl:1.01 } ], caption:() => 'Andere Seite: sanft halten' },
+
+    // --- Partner: Kopf (Kniestand) ---
+    npHeadF:  headPress(kneelS, 'side', 'Stirn', [16, -2], [-1, 0]),
+    npHeadB:  headPress(kneelS, 'side', 'Hinterkopf', [-16, -2], [1, 0]),
+    npHeadL:  headPress(kneelF, 'front', 'Kopfseite links', [16, -1], [-1, 0]),
+    npHeadR:  headPress(kneelF, 'front', 'Kopfseite rechts', [-16, -1], [1, 0]),
+    npHeadRL: headPress(kneelF, 'front', 'Drehung links · Hand an der Schläfe', [14, -6], [-1, .15], 22),
+    npHeadRR: headPress(kneelF, 'front', 'Drehung rechts · Hand an der Schläfe', [-14, -6], [1, .15], -22),
+
+    // --- Partner: Wegdrücken im Kniestand (langsam, unregelmässig) ---
+    npKneel:  { view:'side', period:7.5, clip:true, fn:ph => { const s = Math.floor(ph * 3), f = ph * 3 - s, p = seg01(f, .1, .35) * (1 - seg01(f, .62, .85));
+                  return { ...kneelS, t:(s === 0 ? -2.5 : s === 1 ? 2.5 : -1.5) * p }; },
+                props:() => X.mat(50, 190),
+                caption:ph => ['Druck gegen die Brust', 'Druck gegen den Rücken', 'Druck schräg an die Schulter'][Math.min(2, Math.floor(ph * 3))] + ' – stabil bleiben',
+                over:(J, ph) => { const s = Math.min(2, Math.floor(ph * 3)), f = ph * 3 - s, k = seg01(f, 0, .12) * (1 - seg01(f, .85, 1)), c = lerp(J.neck, J.hip, .3);
+                  return s === 0 ? pHand(c[0] + 11, c[1], -1, 0, k) : s === 1 ? pHand(c[0] - 11, c[1] + 4, 1, 0, k) : pHand(J.neck[0] + 6, J.neck[1] + 1, -.75, .65, k); } },
+
+    // --- Partner: kurze Stösse im Hockey-Stand ---
+    npStance: { view:'side', period:4.5, plant:'feet', clip:true, fn:ph => { const s = Math.floor(ph * 3), f = ph * 3 - s;
+                  const hit = f > .62 ? Math.exp(-(f - .62) * 14) * Math.min(1, (f - .62) * 30) : 0, d = s === 1 ? 1 : -1;
+                  return { ...stanceS, dx:3.5 * d * hit, t:stanceS.t + (s === 1 ? 4 : -4) * hit }; },
+                caption:ph => ['Stoss von vorne an die Schulter', 'Stoss schräg von hinten', 'Stoss an den Oberarm'][Math.min(2, Math.floor(ph * 3))] + ' – ohne Schritt abfangen',
+                props:J => X.stick(J, 'rh'),
+                over:(J, ph) => { const s = Math.min(2, Math.floor(ph * 3)), f = ph * 3 - s, k = f < .5 ? 0 : f < .62 ? seg01(f, .5, .62) : 1 - seg01(f, .7, .95);
+                  const ua = lerp(J.neck, J.le, .5);
+                  return s === 0 ? pHand(J.neck[0] + 10, J.neck[1] + 5, -1, .1, k) : s === 1 ? pHand(J.neck[0] - 9, J.neck[1] + 6, .9, .3, k) : pHand(ua[0] + 7, ua[1] - 2, -.85, .5, k); } },
+
+    // --- Solo ---
+    nkChinHold: { view:'side', period:6, keys:headLift(supine, 18, [.8, 1, 2.6, .8]), caption:liftCap('Doppelkinn machen', 'Kopf 2 cm heben – halten', 'Halten, ruhig atmen'),
+                  props:() => X.mat(30, 215) },
+    nkIsoF:  selfIso('side', 'Stirn', 1, [16, -69], -1),
+    nkIsoB:  selfIso('side', 'Hinterkopf', 1, [-16, -69], 1, { af:0 }),
+    nkIsoL:  selfIso('front', 'Kopfseite links', 1, [17, -67], -1),
+    nkIsoR:  selfIso('front', 'Kopfseite rechts', -1, [-17, -67], 1),
+    nkIsoRL: selfIso('front', 'Drehung links · Hand an der Schläfe', 1, [14, -73], -1, { yaw:22 }),
+    nkIsoRR: selfIso('front', 'Drehung rechts · Hand an der Schläfe', -1, [-14, -73], 1, { yaw:-22 }),
+    nkProne: { view:'side', period:3.4, keys:headLift(prone, -16, [.6, .9, .9, .6]), caption:liftCap('Stirn auf der Matte', 'Doppelkinn – Kopf heben', '2 Sekunden halten'),
+               props:() => X.mat(25, 220) },
+    nkSide:  { view:'front', period:3.4, keys:headLift(sideLie, -22, [.6, .9, .9, .6]), caption:liftCap('Kopf liegt auf der Matte', 'Ohr Richtung obere Schulter', 'Kurz halten'),
+               props:() => X.mat(25, 220) },
+    nkSideB: { view:'front', period:3.4, keys:headLift({ ...sideLie, fx:-1 }, -22, [.6, .9, .9, .6]), caption:liftCap('Andere Seite: Kopf auf der Matte', 'Ohr Richtung obere Schulter', 'Kurz halten'),
+               props:() => X.mat(20, 215) },
+    nkYTW:   { view:'front', period:9, noGround:true, keys:[
+                 { ...standF, la1:-152, la2:-152, ra1:152, ra2:152, w:1 }, { ...standF, la1:-152, la2:-152, ra1:152, ra2:152, w:1.2 },
+                 { ...standF, la1:-90, la2:-90, ra1:90, ra2:90, w:1 }, { ...standF, la1:-90, la2:-90, ra1:90, ra2:90, w:1.2 },
+                 { ...standF, la1:-55, la2:-168, ra1:55, ra2:168, w:1 }, { ...standF, la1:-55, la2:-168, ra1:55, ra2:168, w:1.2 } ],
+               caption:ph => (ph < .33 ? 'Y' : ph < .67 ? 'T' : 'W') + ' · Bauchlage, Ansicht von oben – Arme abheben',
+               props:() => `<rect class="p-mat" x="${CX - 40}" y="8" width="80" height="${GROUND - 4}" rx="6"/>` }
+  });
+  // Check-Anspannen: Signal → anspannen → Druck an die Schulter (s = 1: Partner rechts im Bild, -1: links)
+  const check = s => ({ view:'front', period:3.6, plant:'feet', clip:true, fn:ph => { const hit = ph > .55 && ph < .78 ? Math.sin((ph - .55) / .23 * Math.PI) : 0;
+      return { ...stanceF, dx:-3 * s * hit }; },
+    props:() => '',
+    caption:ph => ph < .28 ? 'Signal: Partner zeigt die Hand' : ph < .48 ? 'Anspannen! Kinn leicht eingezogen' : ph < .78 ? 'Kontakt – stabil bleiben' : 'Lösen',
+    over:(J, ph) => { const tx = J.neck[0] + 13 * s, ty = J.neck[1] + 3, far = [J.neck[0] + 70 * s, J.neck[1] - 46];
+      const m = ph < .45 ? 0 : ph < .56 ? seg01(ph, .45, .56) : ph < .75 ? 1 : 1 - seg01(ph, .75, .95);
+      const hx = far[0] + (tx + 7.5 * s - far[0]) * m, hy = far[1] + (ty - far[1]) * m;
+      const hand = `<line class="p-parm" x1="${f1(hx + 150 * s)}" y1="${f1(hy - 20 + 30 * m)}" x2="${f1(hx + 4 * s)}" y2="${f1(hy)}"/><circle class="p-phand" cx="${f1(hx)}" cy="${f1(hy)}" r="7.5"/>`;
+      return hand + (ph > .28 && ph < .8 ? tense(J) : ''); } });
+  ANIMS.npCheck = check(1); ANIMS.npCheckL = check(-1);
+})();
 /* =====================================================================
    7. FIGUREN-RENDERER
    ===================================================================== */
@@ -3839,10 +4042,10 @@ function suggestWeek(W, save){
   W = W || week;
   if (!DAYS.some(([k]) => W[k].ice)) CLUB_DEFAULT.forEach(k => { W[k].ice = true; W[k].offIce = true; });   // ohne Eistage: Standard Di, Mi, Fr
   DAYS.forEach(([k]) => { W[k].set = ''; });
-  const log = progress.log || [];
+  const log = mainLog(progress.log);
   const lastIdx = log.length ? MISSIONS.findIndex(m => m.id === log.reduce((x, e) => Date.parse(e.at) > Date.parse(x.at) ? e : x, log[0]).mission) : -1;
   let ptr = (lastIdx + 1) % MISSIONS.length;
-  const take = ok => { for (let n = 0; n < MISSIONS.length; n++){ const m = MISSIONS[(ptr + n) % MISSIONS.length]; if (!isLocked(m) && ok(m)){ ptr = (ptr + n + 1) % MISSIONS.length; return m; } } return null; };
+  const take = ok => { for (let n = 0; n < MISSIONS.length; n++){ const m = MISSIONS[(ptr + n) % MISSIONS.length]; if (!isLocked(m) && !m.addon && ok(m)){ ptr = (ptr + n + 1) % MISSIONS.length; return m; } } return null; };
   const score = i => { const k = DAYS[i][0], d = W[k]; if (isGame(d)) return -1;
     const next = W[DAYS[(i + 1) % 7][0]], prev = W[DAYS[(i + 6) % 7][0]];
     return (d.ice ? 1 : 3) + (isGame(next) ? -1 : 0) + (isGame(prev) ? -1 : 0); };
@@ -4094,14 +4297,14 @@ function bindPlanner(){
 }
 
 function todayMission(){
-  const log = (progress.log || []).filter(e => MISSIONS.some(m => m.id === e.mission)), today = new Date().toDateString();
+  const log = mainLog(progress.log).filter(e => MISSIONS.some(m => m.id === e.mission)), today = new Date().toDateString();
   const doneToday = log.find(e => new Date(e.at).toDateString() === today);
   if (doneToday) return { m: MISSIONS.find(x => x.id === doneToday.mission), done:true };
   const td = planFor(new Date()), planned = MISSIONS.find(m => m.id === td.set);
   if (planned) return { m: planned, done:false, planned:true };
   if (DAYS.some((_, i) => planFor(addDays(monOf(new Date()), i)).set)) return { m: null, done:false, free:true, game:isGame(td), ice:td.ice };
   const ss = seasonState(progress); if (ss.next && !ss.champion) return { m: ss.next, done:false, playoff:true };
-  const AV = MISSIONS.filter(m => !isLocked(m));
+  const AV = MISSIONS.filter(m => !isLocked(m) && !m.addon);
   if (!log.length) return { m: AV[0], done:false };
   const last = log.reduce((x, e) => Date.parse(e.at) > Date.parse(x.at) ? e : x, log[0]);
   const idx = AV.findIndex(m => m.id === last.mission);
@@ -4268,10 +4471,10 @@ function levelInfo(xp){
   return { level, into, pct:Math.round(into / LV * 100), name:LEVEL_NAMES[i], next:LEVEL_NAMES[Math.min(i + 1, LEVEL_NAMES.length - 1)], max:i === LEVEL_NAMES.length - 1 };
 }
 const weekTarget = () => DAYS.filter((_, i) => planFor(addDays(monOf(new Date()), i)).ice).length >= 4 ? 2 : 3;      // viel Eis → 2 APC-Sets reichen
-const weekCount = (prog, ref) => (prog.log || []).filter(e => weekStart(e.at) === weekStart(ref || new Date().toISOString())).length;
+const weekCount = (prog, ref) => mainLog(prog.log).filter(e => weekStart(e.at) === weekStart(ref || new Date().toISOString())).length;
 /* Serie in Wochen: jede Woche mit mindestens 2 Trainings zählt (Ruhetage brechen nichts) */
 function weekStreak(prog){
-  const cnt = {}; (prog.log || []).forEach(e => { const k = weekStart(e.at); cnt[k] = (cnt[k] || 0) + 1; });
+  const cnt = {}; mainLog(prog.log).forEach(e => { const k = weekStart(e.at); cnt[k] = (cnt[k] || 0) + 1; });
   const pw = prog.pauseWeeks || {}, ok = k => (cnt[k] || 0) >= 2 || pw[k];   // Pausenwochen (Schmerz) brechen die Serie nicht
   let k = weekStart(new Date().toISOString()), n = 0;
   if (!ok(k)) k = weekStart(new Date(k - 3 * 864e5).toISOString());     // laufende Woche zählt erst ab 2
@@ -4464,8 +4667,8 @@ function matchOver(){
 }
 const RECOVERY_IDS = ['set-33', 'set-34'];
 function nextInRotation(after){
-  const AV = MISSIONS.filter(m => !isLocked(m)); if (!AV.length) return MISSIONS[0];
-  const log = progress.log || []; let id = after;
+  const AV = MISSIONS.filter(m => !isLocked(m) && !m.addon); if (!AV.length) return MISSIONS[0];
+  const log = mainLog(progress.log); let id = after;
   if (!id && log.length) id = log.reduce((x, e) => Date.parse(e.at) > Date.parse(x.at) ? e : x, log[0]).mission;
   const i = AV.findIndex(m => m.id === id);
   return AV[(i + 1) % AV.length];
@@ -4535,7 +4738,7 @@ function bindGear(){
 }
 const leastDone = list => list.slice().sort((a, b) => timesDone(a) - timesDone(b) || MISSIONS.indexOf(a) - MISSIONS.indexOf(b))[0];
 function recommend(feel, today){
-  const AV = MISSIONS.filter(m => !isLocked(m)), low = AV.filter(m => m.load === 'niedrig' && !RECOVERY_IDS.includes(m.id)), g = gameSoon();
+  const AV = MISSIONS.filter(m => !isLocked(m) && !m.addon), low = AV.filter(m => m.load === 'niedrig' && !RECOVERY_IDS.includes(m.id)), g = gameSoon();
   const ps = painState();
   if (ps.mode === 'schonung' || ps.mode === 'nachfragen'){
     const easy = low.filter(m => m.pillars.some(p => /Beweglichkeit|Regeneration|Konzentration|Mentale/.test(p)));
@@ -4608,7 +4811,7 @@ function renderCenter(){
   } else {
     const r = recommend(feel, today);
     if (!gearOk(r.m)){   // Vorschlag braucht fehlende Geräte: passendes Training mit allen Geräten wählen, möglichst gleiche Belastung
-      const OK = MISSIONS.filter(x => !isLocked(x) && gearOk(x)), alt = leastDone(OK.filter(x => x.load === r.m.load)) || leastDone(OK.filter(x => x.load !== 'hoch')) || leastDone(OK);
+      const OK = MISSIONS.filter(x => !isLocked(x) && !x.addon && gearOk(x)), alt = leastDone(OK.filter(x => x.load === r.m.load)) || leastDone(OK.filter(x => x.load !== 'hoch')) || leastDone(OK);
       if (alt){ r.why = `Für «${r.m.title}» fehlen Geräte – heute passt dieses Training. ` + r.why.replace(/^Laut Wochenplan[^.]*\./, '').trim(); r.m = alt; }
       else r.none = true;
     }
@@ -6167,7 +6370,7 @@ function openBriefing(id){
     </div>
     <div class="coach"><span class="tag">Coach</span><p>${m.greeting}</p></div>
     <div>
-      <p class="eyebrow red">${m.label} · ${m.n === 30 ? 'Draussen' : m.n >= 31 ? 'Off-Ice Pro' : m.isNew ? 'Neue Geräte' : 'Phase 1 Athletic Foundation'}</p>
+      <p class="eyebrow red">${m.label} · ${m.addon ? 'Zusatz-Mission über Mittag' : m.n === 30 ? 'Draussen' : m.n >= 31 ? 'Off-Ice Pro' : m.isNew ? 'Neue Geräte' : 'Phase 1 Athletic Foundation'}</p>
       ${m.isNew ? '<span class="new-badge">Neues Training</span>' : ''}
       <h1>${m.title}</h1>
       ${m.tagline ? `<p class="lead muted">${m.tagline}</p>` : ''}
@@ -6669,8 +6872,11 @@ function onPhaseTick(p, leftMs){
 function weekStart(iso){ const d = new Date(iso); d.setHours(0,0,0,0); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getTime(); }
 function stats(prog){
   const log = prog.log || [];
-  const weeks = {};
-  log.forEach(e => { const k = weekStart(e.at); weeks[k] = (weeks[k] || 0) + 1; });
+  const weeks = {}, nweeks = {};
+  log.forEach(e => { const k = weekStart(e.at); if (isAddonId(e.mission)) nweeks[k] = (nweeks[k] || 0) + 1; else weeks[k] = (weeks[k] || 0) + 1; });
+  // Neck Streak: Wochen in Folge mit mindestens 2 Einheiten «Neck Express» (Partner oder Solo)
+  let neckBest = 0; { let r = 0, pv = null; Object.keys(nweeks).map(Number).sort((x, y) => x - y).forEach(k => {
+    if (nweeks[k] >= 2){ r = (pv !== null && Math.round((k - pv) / 864e5) === 7) ? r + 1 : 1; pv = k; neckBest = Math.max(neckBest, r); } else { r = 0; pv = null; } }); }
   const keys = Object.keys(weeks).map(Number).sort((x, y) => x - y);
   let best = 0, run = 0, prev = null;
   keys.forEach(k => {
@@ -6692,6 +6898,7 @@ function stats(prog){
     ...gameBadgeStats(),
     weekCount: keys.reduce((m, k) => Math.max(m, weeks[k]), 0),
     weekStreak: best,
+    neckStreak: neckBest,
     early:   hours.some(d => d.getHours() < 9) ? 1 : 0,
     late:    hours.some(d => d.getHours() >= 18) ? 1 : 0,
     weekend: hours.some(d => d.getDay() === 0 || d.getDay() === 6) ? 1 : 0,
@@ -6711,7 +6918,7 @@ function grant(prog, entry){
   prog.badges = prog.badges || {}; prog.cards = prog.cards || [];
   prog.xp += MISSION.completionXP; prog.completed += 1; prog.last = entry.at;
   let card = null;
-  const ci = PROS.findIndex((_, i) => prog.cards.indexOf(i) < 0);
+  const ci = isAddonId(entry.mission) ? -1 : PROS.findIndex((_, i) => prog.cards.indexOf(i) < 0);
   if (ci >= 0){ prog.cards.push(ci); card = PROS[ci]; }
   const st = stats(prog), fresh = [];
   BADGES.forEach(b => {
@@ -6731,8 +6938,9 @@ function completeRun(){
   // Tages-Quest (ohne Überspringen) und Wochenziel: einmalige Bonus-XP
   const extra = [], dk = new Date(entry.at).toDateString(), wk = weekStart(entry.at);
   target.quests = target.quests || {}; target.weekBonus = target.weekBonus || {};
-  if (!entry.skips && !target.quests[dk]){ target.quests[dk] = 1; target.xp += 25; extra.push('Tages-Quest geschafft: +25 XP'); }
-  if (!target.weekBonus[wk] && (target.log || []).filter(e => weekStart(e.at) === wk).length >= weekTarget()){ target.weekBonus[wk] = 1; target.xp += 50; extra.push('Wochenziel erreicht: +50 XP'); }
+  const addon = isAddonId(entry.mission);   // Neck Express: nur eigene XP, kein Tages-Quest und kein Wochenziel
+  if (!addon && !entry.skips && !target.quests[dk]){ target.quests[dk] = 1; target.xp += 25; extra.push('Tages-Quest geschafft: +25 XP'); }
+  if (!addon && !target.weekBonus[wk] && mainLog(target.log).filter(e => weekStart(e.at) === wk).length >= weekTarget()){ target.weekBonus[wk] = 1; target.xp += 50; extra.push('Wochenziel erreicht: +50 XP'); }
   Object.keys(target.quests).sort((x, y) => Date.parse(y) - Date.parse(x)).slice(30).forEach(k => delete target.quests[k]);
   r.extra = extra;
   r.test = test;
@@ -7379,7 +7587,7 @@ function closeCard3D(){ if (card3d){ try { card3d.dispose(); } catch(e){} card3d
 /* ---------- Saison ---------- */
 function seasonState(prog){
   const s = prog.season || { n:1, start:null };
-  const log = (prog.log || []).filter(e => !s.start || Date.parse(e.at) >= Date.parse(s.start));
+  const log = mainLog(prog.log).filter(e => !s.start || Date.parse(e.at) >= Date.parse(s.start));
   const games = log.slice(0, SEASON.regular).map(e => ({ e, pts: e.skips ? 2 : 3, m:SETS.find(x => x.id === e.mission) }));
   const pts = games.reduce((a, g) => a + g.pts, 0);
   const st = { n:s.n, games, pts, regularDone: games.length >= SEASON.regular, rounds:[], champion:false, next:null };
