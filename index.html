@@ -803,6 +803,18 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .an-bar div span{display:block;height:100%;border-radius:7px}
 .an-bar b{text-align:right;font-family:var(--f-display)}
 .an-empty{color:var(--muted)}
+.hr-nav{display:grid;grid-template-columns:48px minmax(0,1fr) 48px;align-items:center;gap:8px;width:100%;max-width:880px}
+.hr-nav b{text-align:center;font-family:var(--f-display);font-size:1.15rem;letter-spacing:.03em}
+.hr-nb{min-height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel-2);color:var(--text);font-size:1.5rem;line-height:1;cursor:pointer}
+.hr-nb:disabled{opacity:.3;cursor:default}
+.hr-hist{display:flex;flex-direction:column;gap:6px}
+.hr-yr{display:grid;grid-template-columns:minmax(90px,130px) minmax(0,1fr) 92px;gap:10px;align-items:center;min-height:48px;padding:6px 8px;border:1px solid var(--line);border-radius:12px;background:transparent;color:var(--text);text-align:left;cursor:pointer;font:inherit}
+.hr-yl{display:flex;flex-direction:column;line-height:1.2}
+.hr-yl small{color:var(--muted);font-size:.8rem}
+.hr-yl small.up{color:var(--ok)}
+.hr-yb{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--line)}
+.hr-yb i{display:block;height:100%}
+.hr-yr>b{text-align:right;font-family:var(--f-display)}
 .hr-split{display:flex;height:16px;border-radius:8px;overflow:hidden;background:var(--line)}
 .hr-split span{display:block;height:100%}
 .hr-bars .an-bar{grid-template-columns:minmax(120px,190px) minmax(0,1fr) 92px}
@@ -1473,9 +1485,15 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.2';
+const APP_VERSION = '2.21';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.21', date:'19.11.2026',
+    neu:['Trainingsstunden: Zeiträume Woche, Monat, Jahr und Verlauf. Mit den Pfeilen ‹ › lassen sich frühere Wochen, Monate und Jahre anzeigen.',
+         'Jahr wahlweise als Clubsaison (August bis März) oder Kalenderjahr. Im Jahr zeigt die Grafik die Stunden pro Monat.',
+         'Verlauf: ein Balken pro Clubsaison bzw. Kalenderjahr mit Eis und Off-Ice und dem Vergleich zum Vorjahr; Antippen öffnet das Jahr.',
+         'Bericht und PDF: neue Zeiträume «Clubsaison» und «Kalenderjahr» mit Auswahl des Jahres; bei langen Zeiträumen Trainingsstunden pro Monat.'],
+    fix:[] },
   { v:'2.2', date:'19.11.2026',
     neu:['Trainingsstunden: Die App zählt die effektive Trainingszeit von APC-Trainings, Club-Trainings (On-Ice und Off-Ice), Zusatztrainings sowie Camps und Spezialtrainings inkl. Privatlektionen. Matches zählen nicht.',
          'APC-Trainings werden genau gemessen: ab «Aufbau fertig?» bis zum Ende des Cool-downs, ohne Unterbrüche mit der Pause-Taste. Abgebrochene Missionen zählen ab 5 Minuten (ohne XP).',
@@ -4229,30 +4247,66 @@ function saveHrSet(){ store.set(HR_KEY, { on:hrSet.on, off:hrSet.off }); hoursBa
 function hoursBadges(){
   try { const fresh = checkBadges(progress); if (fresh.length){ saveProgress(); gameToast(`<b>Neues Abzeichen!</b> ${fresh.map(f => rpEsc(f.name)).join(', ')}`); } } catch(e){}
 }
-const HR_RANGES = [['week', 'Diese Woche'], ['month', 'Dieser Monat'], ['season', 'Saison']];
-let hrRange = 'month';
-function hrRangeOf(r){
-  const now = new Date();
-  if (r === 'week') return [ymd(monOf(now)), ymd(now), 'Diese Woche'];
-  if (r === 'month') return [ymd(new Date(now.getFullYear(), now.getMonth(), 1)), ymd(now), now.toLocaleDateString('de-CH', { month:'long', year:'numeric' })];
-  const y = curSeason(); return [`${y}-08-01`, ymd(now), `Club-Saison ${seasonLbl(y)}`];
+/* Zeiträume (APC 2.21): Woche, Monat, Jahr (Clubsaison August–März oder Kalenderjahr), Verlauf; mit Pfeilen zurückblättern.
+   Ansicht Clubsaison/Kalenderjahr in apc.hrview.v1 { mode:'club'|'cal' }. April bis Juli gehört zu keiner Clubsaison. */
+const HR_RANGES = [['week', 'Woche'], ['month', 'Monat'], ['year', 'Jahr'], ['hist', 'Verlauf']];
+const HR_MODES = [['club', 'Clubsaison'], ['cal', 'Kalenderjahr']];
+let hrRange = 'month', hrOff = 0;
+let hrMode = (store.get('apc.hrview.v1', {}) || {}).mode === 'cal' ? 'cal' : 'club';
+const saveHrMode = () => store.set('apc.hrview.v1', { mode:hrMode });
+const clubSeasonOf = d => { d = new Date(d); return d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1; };
+const hrYearRange = (Y, mode) => mode === 'cal' ? [`${Y}-01-01`, `${Y}-12-31`, `Kalenderjahr ${Y}`] : [`${Y}-08-01`, `${Y + 1}-03-31`, `Clubsaison ${seasonLbl(Y)}`];
+/* Erstes Jahr mit Daten: April bis Juli gehört zur folgenden Clubsaison (keine leere Saison davor) */
+const hrYearFirst = (mode, day) => { const d = ymdDate(day); return mode === 'cal' ? d.getFullYear() : d.getMonth() >= 3 ? d.getFullYear() : d.getFullYear() - 1; };
+const hrYearNow = mode => mode === 'cal' ? new Date().getFullYear() : clubSeasonOf(new Date());
+function hrRangeOf(r, off){
+  off = off || 0; const now = new Date();
+  if (r === 'week'){ const m = addDays(monOf(now), 7 * off); return [ymd(m), ymd(addDays(m, 6)), off ? `Woche ab ${fmtDM(m, true)}` : 'Diese Woche']; }
+  if (r === 'month'){ const a = new Date(now.getFullYear(), now.getMonth() + off, 1), b = new Date(a.getFullYear(), a.getMonth() + 1, 0); return [ymd(a), ymd(b), a.toLocaleDateString('de-CH', { month:'long', year:'numeric' })]; }
+  return hrYearRange(hrYearNow(hrMode) + off, hrMode);
 }
-/* Stunden pro Woche (letzte n Wochen): [{ ws, ice, off }] */
-function hoursWeeks(n){
-  const mon0 = monOf(new Date()), out = [];
-  for (let k = n - 1; k >= 0; k--){ const ws = addDays(mon0, -7 * k), S = hoursSum(hoursItems(ymd(ws), ymd(addDays(ws, 6)))); out.push({ ws, ice:S.ice, off:S.off }); }
+/* Erster Tag mit Trainingsdaten (Grenze fürs Zurückblättern) */
+function hoursFirstDay(){
+  const d = [ymd(new Date())];
+  (progress.log || []).concat(progress.partLog || []).forEach(e => d.push(ymd(new Date(e.at))));
+  const L = clubLog(); Object.keys(L).forEach(k => { if (L[k].on || L[k].off) d.push(k); });
+  Object.keys(zusatz).forEach(k => { if ((zusatz[k] || []).some(z => z.s === 'done')) d.push(k); });
+  camps.filter(c => c.booked && c.from).forEach(c => d.push(c.from));
+  return d.sort()[0];
+}
+/* Balken für die Grafik: im Jahr pro Monat, sonst 8 Wochen bis zum Ende des gewählten Zeitraums */
+function hoursPeriods(r, off){
+  const out = [];
+  if (r === 'year'){ const [f, t] = hrRangeOf('year', off), a = ymdDate(f);
+    for (let m = new Date(a.getFullYear(), a.getMonth(), 1); ymd(m) <= t; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)){
+      const S = hoursSum(hoursItems(ymd(m), ymd(new Date(m.getFullYear(), m.getMonth() + 1, 0)))); out.push({ lbl:m.toLocaleDateString('de-CH', { month:'short' }), ice:S.ice, off:S.off }); }
+    return out; }
+  const [, t] = hrRangeOf(r, off), end = ymdDate(t) > new Date() ? new Date() : ymdDate(t), mon0 = monOf(end);
+  for (let k = 7; k >= 0; k--){ const ws = addDays(mon0, -7 * k), S = hoursSum(hoursItems(ymd(ws), ymd(addDays(ws, 6))));
+    out.push({ lbl:!k && !off ? 'Diese' : fmtDM(ws), ice:S.ice, off:S.off }); }
   return out;
 }
-function hoursWeeksSVG(W8){
-  const max = Math.max(60, ...W8.map(w => w.ice + w.off)), WW = 600, WH = 180, wb = 24, top = 18, wy = v => (WH - wb) - v / max * (WH - wb - top), wcw = (WW - 20) / W8.length;
-  const fd = d => d.toLocaleDateString('de-CH', { day:'numeric', month:'numeric' });
-  return `<svg viewBox="0 0 ${WW} ${WH}" role="img" aria-label="Trainingsstunden pro Woche">
-    ${W8.map((w, k) => { const x = 10 + k * wcw + wcw * .2, bw = wcw * .6, yi = wy(w.ice), yo = wy(w.ice + w.off), tot = w.ice + w.off;
+function hoursBarsSVG(P, aria){
+  const max = Math.max(60, ...P.map(w => w.ice + w.off)), WW = 600, WH = 180, wb = 24, top = 18, wy = v => (WH - wb) - v / max * (WH - wb - top), wcw = (WW - 20) / P.length, fs = P.length > 9 ? 10.5 : 12;
+  return `<svg viewBox="0 0 ${WW} ${WH}" role="img" aria-label="${aria}">
+    ${P.map((w, k) => { const x = 10 + k * wcw + wcw * .2, bw = wcw * .6, yi = wy(w.ice), yo = wy(w.ice + w.off), tot = w.ice + w.off;
       return `${w.ice ? `<rect x="${x.toFixed(1)}" y="${yi.toFixed(1)}" width="${bw.toFixed(1)}" height="${(WH - wb - yi).toFixed(1)}" fill="var(--ice)"/>` : ''}
         ${w.off ? `<rect x="${x.toFixed(1)}" y="${yo.toFixed(1)}" width="${bw.toFixed(1)}" height="${(yi - yo).toFixed(1)}" fill="var(--ok)"/>` : ''}
-        <text x="${(x + bw / 2).toFixed(1)}" y="${((tot ? yo : WH - wb) - 6).toFixed(1)}" fill="var(--text)" font-size="12" text-anchor="middle">${tot ? (tot / 60).toFixed(1).replace('.', ',') + ' h' : '0'}</text>
-        <text x="${(x + bw / 2).toFixed(1)}" y="${WH - 6}" fill="var(--muted)" font-size="11" text-anchor="middle">${k === W8.length - 1 ? 'Diese' : fd(w.ws)}</text>`; }).join('')}</svg>
+        <text x="${(x + bw / 2).toFixed(1)}" y="${((tot ? yo : WH - wb) - 6).toFixed(1)}" fill="var(--text)" font-size="${fs}" text-anchor="middle">${tot ? (tot / 60).toFixed(1).replace('.', ',') + ' h' : '0'}</text>
+        <text x="${(x + bw / 2).toFixed(1)}" y="${WH - 6}" fill="var(--muted)" font-size="11" text-anchor="middle">${rpEsc(w.lbl)}</text>`; }).join('')}</svg>
     <div class="an-legend"><span><i style="background:var(--ice)"></i>Auf dem Eis</span><span><i style="background:var(--ok)"></i>Off-Ice</span></div>`;
+}
+/* Verlauf: ein Balken pro Clubsaison bzw. Kalenderjahr, mit Vergleich zum Vorjahr; Antippen öffnet das Jahr */
+function hoursHistHTML(){
+  const first = hoursFirstDay(), Yn = hrYearNow(hrMode), Y0 = Math.min(Yn, hrYearFirst(hrMode, first)), today = ymd(new Date()), rows = [];
+  for (let Y = Yn; Y >= Y0; Y--){ const [f, t, lbl] = hrYearRange(Y, hrMode); rows.push({ Y, lbl, S:hoursSum(hoursItems(f, t)), run:today >= f && today <= t, fut:today < f }); }
+  const max = Math.max(60, ...rows.map(r => r.S.all));
+  return `<div class="hr-hist">${rows.map((r, i) => { const p = rows[i + 1], d = p && !r.run && p.S.all ? Math.round(r.S.all - p.S.all) : null;
+      const sub = r.run ? 'läuft' : r.fut ? 'noch nicht begonnen' : d === null ? '' : d === 0 ? '= wie Vorjahr' : `${d > 0 ? '+' : '−'}${fmtHM(Math.abs(d))} vs. Vorjahr`;
+      return `<button type="button" class="hr-yr" data-hry="${r.Y - Yn}" aria-label="${rpEsc(r.lbl)}: ${fmtHM(r.S.all)} öffnen"><span class="hr-yl"><b>${rpEsc(r.lbl.replace(/^Clubsaison |^Kalenderjahr /, ''))}</b>${sub ? `<small class="${d > 0 ? 'up' : ''}">${sub}</small>` : ''}</span>
+        <span class="hr-yb"><i style="width:${(r.S.ice / max * 100).toFixed(1)}%;background:var(--ice)"></i><i style="width:${(r.S.off / max * 100).toFixed(1)}%;background:var(--ok)"></i></span><b>${fmtHM(r.S.all)}</b></button>`; }).join('')}</div>
+    <div class="an-legend"><span><i style="background:var(--ice)"></i>Auf dem Eis</span><span><i style="background:var(--ok)"></i>Off-Ice</span></div>
+    <p class="muted" style="margin:0">${hrMode === 'club' ? 'Clubsaison = August bis März. Stunden von April bis Juli erscheinen im Kalenderjahr.' : 'Kalenderjahr = Januar bis Dezember.'} Antippen öffnet das Jahr.</p>`;
 }
 /* Tabelle nach Kategorie (für Analytics und Eltern-Ansicht) */
 function hoursCatHTML(S){
@@ -4273,10 +4327,16 @@ function hoursMilesHTML(){
 }
 /* Gemeinsamer Inhalt: Spieler (Analytics → Stunden) und Eltern (Trainingsstunden) */
 function hoursBodyHTML(parent){
-  const [f, t, lbl] = hrRangeOf(hrRange), I = hoursItems(f, t), S = hoursSum(I), pc = v => S.all ? (v / S.all * 100).toFixed(1) : 0;
-  return `<div class="pl-tabs" role="group" aria-label="Zeitraum">${HR_RANGES.map(([k, l]) => `<button class="av-chip" data-hrr="${k}" aria-pressed="${hrRange === k}">${l}</button>`).join('')}</div>
+  const tabs = `<div class="pl-tabs" role="group" aria-label="Zeitraum">${HR_RANGES.map(([k, l]) => `<button class="av-chip" data-hrr="${k}" aria-pressed="${hrRange === k}">${l}</button>`).join('')}</div>`;
+  const modes = hrRange === 'year' || hrRange === 'hist' ? `<div class="pl-tabs hr-modes" role="group" aria-label="Jahr als">${HR_MODES.map(([k, l]) => `<button class="av-chip" data-hrm="${k}" aria-pressed="${hrMode === k}">${l}</button>`).join('')}</div>` : '';
+  const miles = `<section class="an-box"><p class="eyebrow">Meilensteine</p><h3>Stunden-Abzeichen</h3>${hoursMilesHTML()}</section>`;
+  if (hrRange === 'hist') return `${tabs}${modes}<section class="an-box"><p class="eyebrow">Verlauf</p><h3>${hrMode === 'club' ? 'Stunden pro Clubsaison' : 'Stunden pro Kalenderjahr'}</h3>${hoursHistHTML()}</section>${miles}`;
+  const [f, t, lbl] = hrRangeOf(hrRange, hrOff), I = hoursItems(f, t), S = hoursSum(I), pc = v => S.all ? (v / S.all * 100).toFixed(1) : 0;
+  const back = f > hoursFirstDay(), fwd = hrOff < 0;
+  return `${tabs}${modes}
+    <div class="hr-nav"><button type="button" class="hr-nb" data-hrnav="-1" ${back ? '' : 'disabled'} aria-label="Früherer Zeitraum">‹</button><b aria-live="polite">${rpEsc(lbl)}</b><button type="button" class="hr-nb" data-hrnav="1" ${fwd ? '' : 'disabled'} aria-label="Späterer Zeitraum">›</button></div>
     <div class="stats">
-      <div class="stat"><small>Total · ${rpEsc(lbl)}</small><b>${fmtHM(S.all)}</b></div>
+      <div class="stat"><small>Total</small><b>${fmtHM(S.all)}</b></div>
       <div class="stat"><small>Auf dem Eis</small><b>${fmtHM(S.ice)}</b></div>
       <div class="stat"><small>Off-Ice</small><b>${fmtHM(S.off)}</b></div>
     </div>
@@ -4285,8 +4345,8 @@ function hoursBodyHTML(parent){
         <div class="an-legend"><span><i style="background:var(--ice)"></i>Eis ${Math.round(pc(S.ice))} %</span><span><i style="background:var(--ok)"></i>Off-Ice ${Math.round(pc(S.off))} %</span></div>` : ''}
       <h3>Nach Training</h3>${hoursCatHTML(S)}
       ${S.est ? '<p class="muted" style="margin:0">Ältere APC-Trainings ohne genaue Messung sind mit ihrer ungefähren Dauer eingerechnet.</p>' : ''}</section>
-    <section class="an-box"><p class="eyebrow">Regelmässigkeit</p><h3>Stunden pro Woche</h3>${hoursWeeksSVG(hoursWeeks(8))}</section>
-    <section class="an-box"><p class="eyebrow">Meilensteine</p><h3>Stunden-Abzeichen</h3>${hoursMilesHTML()}</section>
+    <section class="an-box"><p class="eyebrow">Regelmässigkeit</p><h3>${hrRange === 'year' ? 'Stunden pro Monat' : 'Stunden pro Woche'}</h3>${hoursBarsSVG(hoursPeriods(hrRange, hrOff), hrRange === 'year' ? 'Trainingsstunden pro Monat' : 'Trainingsstunden pro Woche')}</section>
+    ${miles}
     ${parent ? hoursListHTML(I) : ''}`;
 }
 function hoursListHTML(I){
@@ -4308,9 +4368,12 @@ document.addEventListener('change', e => {
   if (curScreen === 'hours') renderHours(true);
 });
 document.addEventListener('click', e => {
-  const b = e.target.closest && e.target.closest('[data-hrr],[data-hrcamp]'); if (!b) return;
+  const b = e.target.closest && e.target.closest('[data-hrr],[data-hrcamp],[data-hrm],[data-hrnav],[data-hry]'); if (!b) return;
   if (b.dataset.hrcamp){ const c = camps.find(x => x.id === b.dataset.hrcamp); if (!c) return; openCamps(); campForm = Object.assign({}, c, { dateOpen:!c.from }); renderCamps(); $('screen-camps').scrollTop = 0; return; }
-  hrRange = b.dataset.hrr;
+  if (b.dataset.hrr){ hrRange = b.dataset.hrr; hrOff = 0; }
+  else if (b.dataset.hrm){ if (hrMode !== b.dataset.hrm){ hrMode = b.dataset.hrm; hrOff = 0; saveHrMode(); } }
+  else if (b.dataset.hrnav){ hrOff = Math.min(0, hrOff + +b.dataset.hrnav); }
+  else if (b.dataset.hry !== undefined){ hrRange = 'year'; hrOff = Math.min(0, +b.dataset.hry); }
   if (curScreen === 'hours') renderHours(true); else if (curScreen === 'analytics'){ const sc = $('screen-analytics'), y = sc.scrollTop; openHoursAn(); $('screen-analytics').scrollTop = y; }
 });
 /* Spieler: Fortschritt → Analytics → Stunden */
@@ -5737,9 +5800,12 @@ function openCamps(){ Voice.stop(); campForm = null; renderCamps(); show('camps'
 /* ---- Eltern: Bericht mit PDF-Export ----
    Wertet die lokalen Daten (Trainings, Feedback, Schmerzen, Rekorde, Abzeichen) für einen Zeitraum aus.
    PDF über die Druckfunktion des Geräts (iPad: im Druckfenster Teilen → «In Dateien sichern»). Es wird nichts übertragen. */
-const reportState = Object.assign({ range:'month', from:'', to:'', note:'' }, store.get('apc.report.v1', {}));
-const saveReport = () => store.set('apc.report.v1', { range:reportState.range, from:reportState.from, to:reportState.to, note:reportState.note });
-const RP_RANGES = [ ['7d','Letzte 7 Tage'], ['month','Dieser Monat'], ['prev','Letzter Monat'], ['3m','Letzte 3 Monate'], ['all','Gesamte Zeit'], ['custom','Eigener Zeitraum'] ];
+const reportState = Object.assign({ range:'month', from:'', to:'', note:'', year:null }, store.get('apc.report.v1', {}));
+const saveReport = () => store.set('apc.report.v1', { range:reportState.range, from:reportState.from, to:reportState.to, note:reportState.note, year:reportState.year });
+const RP_RANGES = [ ['7d','Letzte 7 Tage'], ['month','Dieser Monat'], ['prev','Letzter Monat'], ['3m','Letzte 3 Monate'], ['club','Clubsaison (Aug.–März)'], ['cal','Kalenderjahr'], ['all','Gesamte Zeit'], ['custom','Eigener Zeitraum'] ];
+/* Clubsaison / Kalenderjahr im Bericht (APC 2.21): wählbare Jahre vom ersten Trainingstag bis heute, neuestes zuerst */
+const rpYears = mode => { const Yn = hrYearNow(mode), f = hoursFirstDay(), Y0 = Math.min(Yn, hrYearFirst(mode, f)), out = []; for (let Y = Yn; Y >= Y0; Y--) out.push(Y); return out; };
+const rpYearSel = mode => { const L = rpYears(mode); return L.includes(reportState.year) ? reportState.year : L[0]; };
 const RP_C = { navy:'#0B1F3A', ice:'#2A7DE1', iceL:'#E8F1FC', grey:'#5B6573', line:'#D9DEE5', soft:'#F3F5F8', ok:'#1E9E6A', warn:'#E08A00', red:'#D64545', warnL:'#FDF3E3' };
 const rpEsc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
 const rpDate = (t, o) => new Date(t).toLocaleDateString('de-CH', o || { day:'2-digit', month:'2-digit', year:'numeric' });
@@ -5754,6 +5820,9 @@ function reportRange(){
     case '7d': from = new Date(today.getTime() - 6 * 864e5); break;
     case 'prev': from = new Date(y, m - 1, 1); to = new Date(new Date(y, m, 1).getTime() - 1); break;
     case '3m': from = new Date(y, m - 2, 1); break;
+    case 'club': case 'cal': {
+      const [f, t] = hrYearRange(rpYearSel(reportState.range), reportState.range), tt = new Date(rpParse(t).getTime() + 864e5 - 1);
+      from = rpParse(f); to = tt < to ? tt : to; if (from > to) from = rpDay0(to); break; }
     case 'all': {
       const ts = (progress.log || []).map(e => Date.parse(e.at)).concat(painList().map(r => Date.parse(r.at)), camps.filter(c => c.booked && c.from).map(c => ymdDate(c.from).getTime()).filter(x => x <= today.getTime())).filter(x => !isNaN(x));
       from = ts.length ? rpDay0(Math.min(...ts)) : today; break; }
@@ -5820,7 +5889,9 @@ function reportData(from, to){
     recov:Object.keys(recov).filter(k => { const t = ymdDate(k).getTime(); return t >= F && t <= T && (recov[k].sauna || recov[k].whirl); }).sort().map(k => Object.assign({ day:k }, recov[k])),
     zusatz:Object.keys(zusatz).filter(k => { const t = ymdDate(k).getTime(); return t >= F && t <= T; }).sort().flatMap(k => (zusatz[k] || []).map(z => Object.assign({ day:k }, z))),
     komm:rpKomm(F, T),
-    hours:hoursItems(rpISO(from), rpISO(to)), hoursPrev:hoursItems(rpISO(new Date(PF)), rpISO(new Date(F - 1))),
+    hours:hoursItems(rpISO(from), rpISO(to)),
+    ...(() => { const yr = reportState.range === 'club' || reportState.range === 'cal', ly = d => new Date(d.getFullYear() - 1, d.getMonth(), d.getDate());   // Jahr: Vergleich mit demselben Zeitraum im Vorjahr
+      return { hoursPrev:yr ? hoursItems(rpISO(ly(from)), rpISO(ly(to))) : hoursItems(rpISO(new Date(PF)), rpISO(new Date(F - 1))), hoursPrevLbl:yr ? 'Gleicher Zeitraum im Vorjahr' : 'Vergleichszeitraum davor' }; })(),
     games:gameList().filter(x => { const t = ymdDate(x.day).getTime(); return t >= F && t <= T; }) };
 }
 /* Kommentare im Zeitraum (APC 1.95): [{ day, what, st, t }], nach Datum sortiert */
@@ -5898,11 +5969,16 @@ function rpHoursRows(S){
     rows.push([l, s === 'On-Ice' ? 'Eis' : 'Off-Ice', c.n, c.min]); });
   return rows;
 }
+/* Balken im Bericht: bis 9 Wochen pro Woche, sonst pro Monat */
+const rpHoursPer = D => { if (D.weeks.length <= 9) return rpHoursWeeks(D).map(w => Object.assign(w, { lbl:'Woche ' + rpDate(w.ws, { day:'numeric', month:'numeric' }) }));
+  const out = [], end = rpISO(D.to); for (let m = new Date(D.from.getFullYear(), D.from.getMonth(), 1); rpISO(m) <= end; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)){
+    const a = rpISO(m), b = rpISO(new Date(m.getFullYear(), m.getMonth() + 1, 0)), S = hoursSum((D.hours || []).filter(x => x.day >= a && x.day <= b)); out.push({ lbl:m.toLocaleDateString('de-CH', { month:'short', year:'numeric' }), ice:S.ice, off:S.off }); }
+  return out; };
 const rpHoursWeeks = D => D.weeks.map(w => { const a = ymd(new Date(w.ws)), b = ymd(addDays(new Date(w.ws), 6)), S = hoursSum((D.hours || []).filter(x => x.day >= a && x.day <= b)); return { ws:w.ws, ice:S.ice, off:S.off }; });
 function rpHoursCamps(D){ const m = {}; (D.hours || []).filter(x => x.cid).forEach(x => { const c = m[x.cid] = m[x.cid] || { label:x.label, days:new Set(), on:0, off:0, open:0 }; c.days.add(x.day); if (x.open) c.open++; else if (x.ice) c.on += x.min; else c.off += x.min; }); return Object.values(m); }
 function rpHoursCap(D){
   const S = hoursSum(D.hours || []), P = hoursSum(D.hoursPrev || []), d = Math.round(S.all - P.all), out = [];
-  if (P.all || S.all) out.push(`Vergleichszeitraum davor: ${fmtHM(P.all)}${d ? ` (${d > 0 ? '+' : '-'}${fmtHM(Math.abs(d))})` : ''}`);
+  if (P.all || S.all) out.push(`${D.hoursPrevLbl || 'Vergleichszeitraum davor'}: ${fmtHM(P.all)}${d ? ` (${d > 0 ? '+' : '-'}${fmtHM(Math.abs(d))})` : ''}`);
   out.push('Effektive Zeit: APC gemessen ohne Unterbrüche, Club-Trainings mit der hinterlegten Dauer, Matches zählen nicht');
   if (S.est) out.push('ca. = ältere APC-Trainings ohne genaue Messung');
   if (S.open) out.push(`${S.open} Eintr${S.open > 1 ? 'äge' : 'ag'} ohne Zeit`);
@@ -5910,12 +5986,12 @@ function rpHoursCap(D){
 }
 function rpHoursHTML(D){
   const S = hoursSum(D.hours || []); if (!S.all && !S.open) return '';
-  const rows = rpHoursRows(S), W = rpHoursWeeks(D), wmax = Math.max(1, ...W.map(w => w.ice + w.off)), CP = rpHoursCamps(D);
+  const rows = rpHoursRows(S), W = rpHoursPer(D), wmax = Math.max(1, ...W.map(w => w.ice + w.off)), CP = rpHoursCamps(D);
   return `<section class="rp-sec"><h2>Trainingsstunden (effektiv)</h2><table class="rp-tab rp-grid"><thead><tr><th>Training</th><th>Art</th><th class="r">Einheiten</th><th class="r">Zeit</th></tr></thead><tbody>
     ${rows.map(([l, w, n, m]) => `<tr><td>${rpEsc(l)}</td><td>${w}</td><td class="r">${n}</td><td class="r">${fmtHM(m)}</td></tr>`).join('')}
     <tr><td>Auf dem Eis</td><td></td><td></td><td class="r"><b>${fmtHM(S.ice)}</b></td></tr><tr><td>Off-Ice</td><td></td><td></td><td class="r"><b>${fmtHM(S.off)}</b></td></tr>
     <tr><td><b>Total</b></td><td></td><td></td><td class="r"><b>${fmtHM(S.all)}</b></td></tr></tbody></table>
-    ${W.length >= 2 ? `<div class="rp-bars" style="margin-top:10px">${W.map(w => `<div class="rp-bar rp-hbar"><span>Woche ${rpDate(w.ws, { day:'numeric', month:'numeric' })}</span><div style="display:flex"><i style="width:${(w.ice / wmax * 100).toFixed(0)}%;border-radius:0"></i><i style="width:${(w.off / wmax * 100).toFixed(0)}%;background:${RP_C.ok};border-radius:0"></i></div><b>${fmtHM(w.ice + w.off)}</b></div>`).join('')}</div>
+    ${W.length >= 2 ? `<div class="rp-bars" style="margin-top:10px">${W.map(w => `<div class="rp-bar rp-hbar"><span>${w.lbl}</span><div style="display:flex"><i style="width:${(w.ice / wmax * 100).toFixed(0)}%;border-radius:0"></i><i style="width:${(w.off / wmax * 100).toFixed(0)}%;background:${RP_C.ok};border-radius:0"></i></div><b>${fmtHM(w.ice + w.off)}</b></div>`).join('')}</div>
       <p class="rp-cap">Balken: blau = Eis, grün = Off-Ice</p>` : ''}
     ${CP.length ? `<table class="rp-tab rp-grid" style="margin-top:10px"><thead><tr><th>Camp / Spezialtraining</th><th class="r">Tage</th><th class="r">On-Ice</th><th class="r">Off-Ice</th></tr></thead><tbody>
       ${CP.map(c => `<tr><td>${rpEsc(c.label)}</td><td class="r">${c.days.size}</td><td class="r">${c.on ? fmtHM(c.on) : '–'}</td><td class="r">${c.off ? fmtHM(c.off) : '–'}${c.open ? ' · Zeit offen' : ''}</td></tr>`).join('')}</tbody></table>` : ''}
@@ -6082,6 +6158,7 @@ function renderReport(){
     <div class="rp-ctl">
       <label for="rp-range" class="pe-lbl">Zeitraum</label>
       <select id="rp-range" class="pselect">${RP_RANGES.map(([k, l]) => `<option value="${k}" ${reportState.range === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      ${reportState.range === 'club' || reportState.range === 'cal' ? `<select id="rp-year" class="pselect" aria-label="Jahr">${rpYears(reportState.range).map(Y => `<option value="${Y}" ${rpYearSel(reportState.range) === Y ? 'selected' : ''}>${reportState.range === 'club' ? seasonLbl(Y) : Y}</option>`).join('')}</select>` : ''}
       ${reportState.range === 'custom' ? `<input type="date" id="rp-from" class="pselect" value="${reportState.from || rpISO(from)}" aria-label="Von"><span class="muted">bis</span><input type="date" id="rp-to" class="pselect" value="${reportState.to || rpISO(to)}" aria-label="Bis">` : ''}
       <button class="btn btn-primary btn-small" id="btn-rp-pdf">PDF herunterladen</button>
     </div>
@@ -6090,6 +6167,7 @@ function renderReport(){
   </div>`;
   $('btn-rp-back').onclick = openParents;
   $('rp-range').onchange = e => { reportState.range = e.target.value; saveReport(); renderReport(); };
+  { const ys = $('rp-year'); if (ys) ys.onchange = () => { reportState.year = +ys.value; saveReport(); renderReport(); }; }
   if ($('rp-from')){
     const upd = () => { reportState.from = $('rp-from').value; reportState.to = $('rp-to').value; saveReport(); const sc = $('screen-report'), y = sc.scrollTop; renderReport(); $('screen-report').scrollTop = y; };
     $('rp-from').onchange = upd; $('rp-to').onchange = upd;
@@ -6202,9 +6280,9 @@ async function buildReportPDF(D){
         txt(l, M + 6, y + 4.5, 8.2); txt(w, xA, y + 4.5, 8.2); txt(String(n), xN, y + 4.5, 8.2, { align:'right' }); txt(fmtHM(m), xT, y + 4.5, 8.2, { align:'right' }); line(M, y + 17, M + CW, y + 17, C.line); y += 17; });
       ensure(3 * 17 + 8);
       [['Auf dem Eis', S.ice, false], ['Off-Ice', S.off, false], ['Total', S.all, true]].forEach(([l, v, b]) => { rect(M, y, CW, 17, b ? C.iceL : col('#FFFFFF')); txt(l, M + 6, y + 4.5, 8.3, { bold:b, color:C.navy }); txt(fmtHM(v), xT, y + 4.5, 8.3, { align:'right', bold:true, color:C.navy }); y += 17; });
-      const W = rpHoursWeeks(D);
+      const W = rpHoursPer(D);
       if (W.length >= 2){ const wmax = Math.max(1, ...W.map(w => w.ice + w.off)), bx = M + 70, bwM = CW - 70 - 70;
-        y += 8; W.forEach(w => { ensure(14); txt(`Woche ${rpDate(w.ws, { day:'numeric', month:'numeric' })}`, M + 6, y + 1, 7.8, { color:C.grey });
+        y += 8; W.forEach(w => { ensure(14); txt(w.lbl, M + 6, y + 1, 7.8, { color:C.grey });
           rect(bx, y + 1, bwM, 8, C.soft); const wi = w.ice / wmax * bwM, wo = w.off / wmax * bwM;
           if (wi) rect(bx, y + 1, wi, 8, C.ice); if (wo) rect(bx + wi, y + 1, wo, 8, C.ok);
           txt(fmtHM(w.ice + w.off), xT, y + 1, 7.8, { align:'right', color:C.navy }); y += 13; });
