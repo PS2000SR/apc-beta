@@ -151,6 +151,7 @@
     var out = Object.assign({}, b, a);
     out.log = uni(a.log, b.log, function(e){ return (e && e.at) + '|' + (e && e.mission); });
     out.tests = uni(a.tests, b.tests, function(e){ return e && e.at; });
+    out.partLog = uni(a.partLog, b.partLog, function(e){ return (e && e.at) + '|' + (e && e.mission); });   // APC 2.2: abgebrochene Missionen (Trainingsstunden)
     out.records = {}; Object.keys(Object.assign({}, b.records, a.records)).forEach(function(k){ out.records[k] = uni((a.records || {})[k], (b.records || {})[k], function(r){ return (r && r.at) + '|' + (r && r.v); }); });
     out.badges = Object.assign({}, b.badges, a.badges);
     out.cards = uni(a.cards, b.cards, function(c){ return JSON.stringify(c); });
