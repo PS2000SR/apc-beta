@@ -1488,9 +1488,12 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.23';
+const APP_VERSION = '2.24';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.24', date:'19.11.2026',
+    neu:['Camps und Spezialtrainings: Die Kontrolle unter der Gesamtzeit zeigt jetzt auch den Zeitraum (z. B. «122 Tage, 1.4.–31.7.2026»).'],
+    fix:['Camps und Spezialtrainings: Das Bis-Datum lässt sich auf dem iPad wieder zuverlässig wählen. Bisher baute sich das Formular nach jeder Datumsänderung neu auf, wodurch sich der Datumswähler schliessen konnte.'] },
   { v:'2.23', date:'19.11.2026',
     neu:[],
     fix:['Camps und Spezialtrainings über einen langen Zeitraum (z. B. April bis Juli): Die Gesamtzeit wird jetzt auf alle Tage verteilt und erscheint in der Jahresansicht anteilig in jedem Monat. Bisher wurden nur die ersten 60 Tage berücksichtigt.',
@@ -5742,11 +5745,12 @@ const hmPair = (m, id, lbl) => { const h = m === null || m === undefined ? '' : 
   return `<div class="cp-f"><span class="pe-lbl">${lbl}</span><div class="cp-hm"><input type="number" inputmode="numeric" min="0" max="500" step="1" id="${id}-h" class="pselect" value="${h}" placeholder="0" aria-label="${lbl}: Stunden"><span>h</span>
     <input type="number" inputmode="numeric" min="0" max="59" step="5" id="${id}-m" class="pselect" value="${mm}" placeholder="0" aria-label="${lbl}: Minuten"><span>min</span></div></div>`; };
 const hmRead = id => { const h = $(id + '-h'), m = $(id + '-m'); if (!h || !m) return undefined; if (h.value === '' && m.value === '') return null; return Math.max(0, Math.min(30000, Math.round((+h.value || 0) * 60 + (+m.value || 0)))); };
+function campTInfo(f){ const n = f.from && f.to >= f.from ? campDayList(f).length : 0, per = (m, l) => m ? `${l} ca. ${fmtHM(m / n)}` : '';
+  return n && (f.totOn || f.totOff) ? `Ergibt pro Tag ${[per(f.totOn, 'On-Ice'), per(f.totOff, 'Off-Ice')].filter(Boolean).join(' · ')} (${n} ${n === 1 ? 'Tag' : 'Tage'}, ${fmtDM(ymdDate(f.from))}–${fmtDM(ymdDate(f.to), true)}), gleichmässig verteilt.` : 'Gesamte Trainingszeit des Camps bzw. Spezialtrainings. Die App verteilt sie gleichmässig auf die Tage.'; }
 function campHrsHTML(f){
   const mode = campHMode(f), n = f.from && f.to >= f.from ? campDayList(f).length : 0;
   const tog = `<div class="pl-tabs" role="group" aria-label="Erfassung der Trainingszeit">${[['total', 'Gesamt für den Zeitraum'], ['day', 'Pro Tag']].map(([k, l]) => `<button type="button" class="av-chip" data-cphm="${k}" aria-pressed="${mode === k}">${l}</button>`).join('')}</div>`;
-  if (mode === 'total'){ const per = (m, l) => m ? `${l} ca. ${fmtHM(m / n)}` : '';
-    const info = n && (f.totOn || f.totOff) ? `Ergibt pro Tag ${[per(f.totOn, 'On-Ice'), per(f.totOff, 'Off-Ice')].filter(Boolean).join(' · ')} (${n} ${n === 1 ? 'Tag' : 'Tage'}), gleichmässig verteilt.` : 'Gesamte Trainingszeit des Camps bzw. Spezialtrainings. Die App verteilt sie gleichmässig auf die Tage.';
+  if (mode === 'total'){ const info = campTInfo(f);
     return `<div class="cp-hrs"><span class="pe-lbl">Trainingszeiten (für die Trainingsstunden)</span>${tog}
       <div class="cp-two">${hmPair(f.totOn, 'cp-ton', 'On-Ice gesamt')}${hmPair(f.totOff, 'cp-toff', 'Off-Ice gesamt')}</div>
       <p class="muted" style="margin:0" id="cp-tinfo">${info} Noch nicht bekannt? Leer lassen und später über «Ändern» erfassen.</p></div>`; }
@@ -5799,15 +5803,21 @@ function renderCamps(){
     document.querySelectorAll('[data-cphx]').forEach(i => { const o = X[i.dataset.cphx] = X[i.dataset.cphx] || {}; o.x = i.checked; });
     return X; }
   const len = () => { read(); $('cp-len').textContent = campForm.from && campForm.to >= campForm.from ? `Dauer: ${campLen(campForm)}` : ''; };
-  $('cp-from').onchange = () => { if (!$('cp-to').value || $('cp-to').value < $('cp-from').value) $('cp-to').value = $('cp-from').value; len(); redraw(); };
-  $('cp-to').onchange = () => { len(); redraw(); }; len();
-  document.querySelectorAll('[data-cphx]').forEach(i => i.onchange = () => { read(); redraw(); });
-  ['cp-ton-h', 'cp-ton-m', 'cp-toff-h', 'cp-toff-m'].forEach(id => { const i = $(id); if (i) i.onchange = () => { read(); redraw(); }; });
+  /* APC 2.24: Bei Datum und Zeiten nur den Abschnitt «Trainingszeiten» neu aufbauen, nie die Datumsfelder
+     (sonst schliesst sich der Datumswähler auf dem iPad, bevor das Datum übernommen ist) */
+  const refreshHrs = () => { read(); const box = document.querySelector('#cp-form .cp-hrs'); if (!box) return; box.outerHTML = campHrsHTML(campForm); bindHrs(); };
+  $('cp-from').onchange = () => { if (!$('cp-to').value || $('cp-to').value < $('cp-from').value) $('cp-to').value = $('cp-from').value; len(); refreshHrs(); };
+  $('cp-to').onchange = () => { len(); refreshHrs(); }; len();
+  function bindHrs(){
+  document.querySelectorAll('[data-cphx]').forEach(i => i.onchange = refreshHrs);
+  ['cp-ton-h', 'cp-ton-m', 'cp-toff-h', 'cp-toff-m'].forEach(id => { const i = $(id); if (i) i.onchange = () => { read(); const t = $('cp-tinfo'); if (t) t.textContent = campTInfo(campForm) + ' Noch nicht bekannt? Leer lassen und später über «Ändern» erfassen.'; }; });
   document.querySelectorAll('[data-cphm]').forEach(b => b.onclick = () => { read(); const to = b.dataset.cphm, f = campForm; if (campHMode(f) === to) return;
     const n = f.from && f.to >= f.from ? campDayList(f).length : 0;
     if (to === 'total'){ if (n && f.totOn == null && f.totOff == null){ let on = 0, off = 0, any = false; campDayList(f).forEach(d => { const x = campDay(f, d); if (!x.x){ if (x.on != null || x.off != null) any = true; on += x.on || 0; off += x.off || 0; } }); if (any){ f.totOn = on || null; f.totOff = off || null; } } }   // Vorschlag: Summe der Tageszeiten
     else if (n && f.on == null && f.off == null){ const r = m => m == null ? null : Math.round(m / n / 5) * 5; f.on = r(f.totOn); f.off = r(f.totOff); }   // Vorschlag: Gesamtzeit geteilt durch Tage
-    f.hmode = to; redraw(); });
+    f.hmode = to; const box = document.querySelector('#cp-form .cp-hrs'); if (box){ box.outerHTML = campHrsHTML(f); bindHrs(); } });
+  }
+  bindHrs();
   document.querySelectorAll('[data-cp-kind]').forEach(b => b.onclick = () => { read(); campForm.kind = b.dataset.cpKind; redraw(); });
   document.querySelectorAll('[data-cp-book]').forEach(b => b.onclick = () => { read(); campForm.booked = b.dataset.cpBook === '1'; redraw(); });
   $('cp-open').onchange = e => { read(); campForm.dateOpen = e.target.checked; redraw(); };
