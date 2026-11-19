@@ -1488,9 +1488,13 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.22';
+const APP_VERSION = '2.23';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.23', date:'19.11.2026',
+    neu:[],
+    fix:['Camps und Spezialtrainings über einen langen Zeitraum (z. B. April bis Juli): Die Gesamtzeit wird jetzt auf alle Tage verteilt und erscheint in der Jahresansicht anteilig in jedem Monat. Bisher wurden nur die ersten 60 Tage berücksichtigt.',
+         'Trainingsstunden: Bei Camps und Spezialtrainings steht die Anzahl Camps statt der Anzahl Tage.'] },
   { v:'2.22', date:'19.11.2026',
     neu:['Camps und Spezialtrainings: Trainingszeit wahlweise «Gesamt für den Zeitraum» (On-Ice und Off-Ice in Stunden und Minuten) oder «Pro Tag».',
          'Die Gesamtzeit wird gleichmässig auf die Tage verteilt; so landen die Stunden auch bei Camps über ein Monats- oder Saisonende im richtigen Zeitraum.',
@@ -4209,7 +4213,7 @@ const hrSet = Object.assign({ on:null, off:null }, store.get(HR_KEY, {}));
 const ZT_ICE = ['synth', 'ice', 'private'];
 const HR_MILES = [25, 50, 100];
 const fmtHM = m => { m = Math.round(m || 0); const h = Math.floor(m / 60), r = m % 60; return h ? `${h} h${r ? ' ' + r + ' min' : ''}` : `${r} min`; };
-const campDayList = c => { const out = []; if (!c.from || !c.to || c.to < c.from) return out; for (let d = ymdDate(c.from), n = 0; ymd(d) <= c.to && n < 60; d = addDays(d, 1), n++) out.push(ymd(d)); return out; };
+const campDayList = c => { const out = []; if (!c.from || !c.to || c.to < c.from) return out; for (let d = ymdDate(c.from), n = 0; ymd(d) <= c.to && n < 400; d = addDays(d, 1), n++) out.push(ymd(d)); return out; };
 const hrNum = v => v === null || v === undefined || v === '' || isNaN(+v) ? null : Math.max(0, Math.min(720, Math.round(+v)));
 /* Erfassungsart (APC 2.22): 'total' = Gesamtzeit für den Zeitraum (totOn/totOff in Minuten, gleichmässig auf die Tage verteilt), 'day' = pro Tag.
    Einträge ohne Angabe: mit Tageszeiten 'day', sonst 'total'. */
@@ -4242,7 +4246,7 @@ function hoursSum(I){
   HR_CAT.forEach(([k]) => { t.cat[k] = { n:0, min:0, ice:0, off:0 }; });
   I.forEach(x => { if (x.open) t.open++; if (x.est) t.est = true; if (!x.min) return;
     t.all += x.min; t[x.ice ? 'ice' : 'off'] += x.min;
-    const c = t.cat[x.cat]; c.n++; c.min += x.min; c[x.ice ? 'ice' : 'off'] += x.min;
+    const c = t.cat[x.cat]; if (x.cid){ (c.ids = c.ids || new Set()).add(x.cid); c.n = c.ids.size; } else c.n++; c.min += x.min;   // Camps: Anzahl Camps statt Tage c[x.ice ? 'ice' : 'off'] += x.min;
     if (x.cat === 'zt'){ const a = t.art[x.art] = t.art[x.art] || { n:0, min:0, ice:x.ice }; a.n++; a.min += x.min; } });
   return t;
 }
