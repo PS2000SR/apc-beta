@@ -833,6 +833,9 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .hr-dur{display:flex;flex-direction:column;gap:8px;margin:6px 0}
 .hr-hint{border-color:var(--gold)}
 .an-box details summary{cursor:pointer;min-height:32px;display:flex;align-items:center}
+.cp-hm{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;gap:6px;align-items:center}
+.cp-hm input{width:100%;min-width:0}
+.cp-hm span{color:var(--muted)}
 .cp-hrs{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
 .cp-hday{display:grid;grid-template-columns:minmax(80px,1fr) 78px 78px auto;gap:8px;align-items:center}
 .cp-hday input[type=number]{width:100%;min-width:0}
@@ -1485,9 +1488,14 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.21';
+const APP_VERSION = '2.22';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.22', date:'19.11.2026',
+    neu:['Camps und Spezialtrainings: Trainingszeit wahlweise «Gesamt für den Zeitraum» (On-Ice und Off-Ice in Stunden und Minuten) oder «Pro Tag».',
+         'Die Gesamtzeit wird gleichmässig auf die Tage verteilt; so landen die Stunden auch bei Camps über ein Monats- oder Saisonende im richtigen Zeitraum.',
+         'Beim Umschalten rechnet die App die bisherigen Werte um. Neue Einträge starten mit «Gesamt».'],
+    fix:[] },
   { v:'2.21', date:'19.11.2026',
     neu:['Trainingsstunden: Zeiträume Woche, Monat, Jahr und Verlauf. Mit den Pfeilen ‹ › lassen sich frühere Wochen, Monate und Jahre anzeigen.',
          'Jahr wahlweise als Clubsaison (August bis März) oder Kalenderjahr. Im Jahr zeigt die Grafik die Stunden pro Monat.',
@@ -4203,7 +4211,11 @@ const HR_MILES = [25, 50, 100];
 const fmtHM = m => { m = Math.round(m || 0); const h = Math.floor(m / 60), r = m % 60; return h ? `${h} h${r ? ' ' + r + ' min' : ''}` : `${r} min`; };
 const campDayList = c => { const out = []; if (!c.from || !c.to || c.to < c.from) return out; for (let d = ymdDate(c.from), n = 0; ymd(d) <= c.to && n < 60; d = addDays(d, 1), n++) out.push(ymd(d)); return out; };
 const hrNum = v => v === null || v === undefined || v === '' || isNaN(+v) ? null : Math.max(0, Math.min(720, Math.round(+v)));
-const campDay = (c, day) => { const o = (c.dayx || {})[day] || {}; return { on:hrNum(o.on !== undefined && o.on !== null ? o.on : c.on), off:hrNum(o.off !== undefined && o.off !== null ? o.off : c.off), x:!!o.x }; };
+/* Erfassungsart (APC 2.22): 'total' = Gesamtzeit für den Zeitraum (totOn/totOff in Minuten, gleichmässig auf die Tage verteilt), 'day' = pro Tag.
+   Einträge ohne Angabe: mit Tageszeiten 'day', sonst 'total'. */
+const campHMode = c => c.hmode === 'total' || c.hmode === 'day' ? c.hmode : (c.on != null || c.off != null || (c.dayx && Object.keys(c.dayx).length) ? 'day' : 'total');
+const campDay = (c, day) => { if (campHMode(c) === 'total'){ const n = Math.max(1, campDayList(c).length), f = v => v === null || v === undefined || v === '' || isNaN(+v) ? null : +v / n; return { on:f(c.totOn), off:f(c.totOff), x:false, dist:true }; }
+  const o = (c.dayx || {})[day] || {}; return { on:hrNum(o.on !== undefined && o.on !== null ? o.on : c.on), off:hrNum(o.off !== undefined && o.off !== null ? o.off : c.off), x:!!o.x }; };
 const campTimesOpen = c => !!c.booked && campDayList(c).some(day => { const x = campDay(c, day); return !x.x && x.on === null && x.off === null; });
 const hrSetTitle = id => { const s = SETS.find(x => x.id === id); return s ? s.title : id; };
 const hrPlanMin = id => { try { const s = SETS.find(x => x.id === id); return s ? Math.round(buildTimeline(s).total / 60) : 0; } catch(e){ return 0; } };
@@ -4220,8 +4232,8 @@ function hoursItems(from, to){
   Object.keys(zusatz).forEach(day => { if (inR(day)) (zusatz[day] || []).forEach(z => { if (z.s === 'done') out.push({ day, cat:'zt', art:z.art, ice:ZT_ICE.includes(z.art), min:z.min || 0, label:ztArt(z.art) }); }); });
   camps.filter(c => c.booked).forEach(c => campDayList(c).forEach(day => { if (!inR(day)) return; const x = campDay(c, day); if (x.x) return;
     const label = `${CAMP_KIND[c.kind]}: ${c.name || ''}`.trim(), open = x.on === null && x.off === null;
-    if (x.on || open) out.push({ day, cat:'campOn', ice:true, min:x.on || 0, label, open, cid:c.id });
-    if (x.off) out.push({ day, cat:'campOff', ice:false, min:x.off, label, cid:c.id }); }));
+    if (x.on || open) out.push({ day, cat:'campOn', ice:true, min:x.on || 0, label, open, cid:c.id, dist:x.dist });
+    if (x.off) out.push({ day, cat:'campOff', ice:false, min:x.off, label, cid:c.id, dist:x.dist }); }));
   return out.sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
 }
 const HR_CAT = [['apc', 'APC-Trainings', 'Off-Ice'], ['clubOn', 'Club On-Ice', 'On-Ice'], ['clubOff', 'Club Off-Ice', 'Off-Ice'], ['zt', 'Zusatztrainings', ''], ['campOn', 'Camps / Spezial On-Ice', 'On-Ice'], ['campOff', 'Camps / Spezial Off-Ice', 'Off-Ice']];
@@ -4354,7 +4366,7 @@ function hoursListHTML(I){
   if (!L.length) return '';
   return `<section class="an-box"><details><summary><b>Einzelne Einträge (${L.length})</b></summary>
     <table class="hr-tab"><thead><tr><th>Datum</th><th>Training</th><th>Art</th><th class="r">Zeit</th></tr></thead><tbody>
-    ${L.slice().reverse().map(x => `<tr><td>${ymdDate(x.day).toLocaleDateString('de-CH', { weekday:'short', day:'numeric', month:'numeric' })}</td><td>${rpEsc(x.label)}</td><td>${x.ice ? 'Eis' : 'Off-Ice'}</td><td class="r">${x.open ? '<span class="hr-open">offen</span>' : (x.est ? 'ca. ' : '') + fmtHM(x.min)}</td></tr>`).join('')}
+    ${L.slice().reverse().map(x => `<tr><td>${ymdDate(x.day).toLocaleDateString('de-CH', { weekday:'short', day:'numeric', month:'numeric' })}</td><td>${rpEsc(x.label)}${x.dist ? ' <small class="muted">(gleichmässig verteilt)</small>' : ''}</td><td>${x.ice ? 'Eis' : 'Off-Ice'}</td><td class="r">${x.open ? '<span class="hr-open">offen</span>' : (x.est ? 'ca. ' : '') + fmtHM(x.min)}</td></tr>`).join('')}
     </tbody></table></details></section>`;
 }
 /* Dauer der Club-Trainings: einmal hinterlegen (gilt für alle bestätigten Club-Trainings, auch rückwirkend) */
@@ -5688,7 +5700,7 @@ function campCardHTML(c){
   const badges = [c.booked ? '<span class="cp-st ok">Gebucht</span>' : '<span class="cp-st no">Nicht gebucht</span>', c.from ? '' : '<span class="cp-st">Datum offen</span>',
     noPrice(c) ? '<span class="cp-st">Preis offen</span>' : c.estimate ? '<span class="cp-st">Preis geschätzt</span>' : '',
     campTimesOpen(c) ? '<span class="cp-st">Zeiten offen</span>' : ''].join('');
-  const hrs = (() => { if (!c.from) return ''; let on = 0, off = 0; campDayList(c).forEach(d => { const x = campDay(c, d); if (!x.x){ on += x.on || 0; off += x.off || 0; } }); return on || off ? `<br>Trainingszeit: ${[on ? 'On-Ice ' + fmtHM(on) : '', off ? 'Off-Ice ' + fmtHM(off) : ''].filter(Boolean).join(' · ')}` : ''; })();
+  const hrs = (() => { if (!c.from) return ''; let on = 0, off = 0; campDayList(c).forEach(d => { const x = campDay(c, d); if (!x.x){ on += x.on || 0; off += x.off || 0; } }); return on || off ? `<br>Trainingszeit${campHMode(c) === 'total' ? ' gesamt' : ''}: ${[on ? 'On-Ice ' + fmtHM(on) : '', off ? 'Off-Ice ' + fmtHM(off) : ''].filter(Boolean).join(' · ')}${campHMode(c) === 'total' ? ` (${campLen(c)})` : ''}` : ''; })();
   return `<article class="cp-card ${c.kind}${c.booked ? '' : ' nb'}"><span class="cp-tag">${CAMP_KIND[c.kind]}</span><span class="cp-price">${campTotal(c)}</span>
     <b style="grid-column:1/-1">${rpEsc(c.name)}</b>
     <span class="cp-meta">${[c.place, c.org].filter(Boolean).map(rpEsc).join(' · ') || 'Ort und Veranstalter offen'}<br>${campDate(c)}${c.from ? ' · ' + campLen(c) : ''}${campStay(c) ? `<br>Camp ${noPrice(c) ? 'offen' : campPrice(c)} + Übernachtung ${fmtCHF(campStay(c))}` : ''}${hrs}</span>
@@ -5721,14 +5733,26 @@ function campFormHTML(){
     <div class="bk-row"><button type="submit" class="btn btn-primary btn-small">Speichern</button><button type="button" class="btn btn-ghost btn-small" id="cp-cancel">Abbrechen</button></div></form>`;
 }
 /* Trainingszeiten im Formular (APC 2.2): vorgesehene Minuten pro Tag, einzelne Tage anpassbar oder ausgelassen */
+/* Gesamtzeit in Stunden und Minuten */
+const hmPair = (m, id, lbl) => { const h = m === null || m === undefined ? '' : Math.floor(m / 60), mm = m === null || m === undefined ? '' : m % 60;
+  return `<div class="cp-f"><span class="pe-lbl">${lbl}</span><div class="cp-hm"><input type="number" inputmode="numeric" min="0" max="500" step="1" id="${id}-h" class="pselect" value="${h}" placeholder="0" aria-label="${lbl}: Stunden"><span>h</span>
+    <input type="number" inputmode="numeric" min="0" max="59" step="5" id="${id}-m" class="pselect" value="${mm}" placeholder="0" aria-label="${lbl}: Minuten"><span>min</span></div></div>`; };
+const hmRead = id => { const h = $(id + '-h'), m = $(id + '-m'); if (!h || !m) return undefined; if (h.value === '' && m.value === '') return null; return Math.max(0, Math.min(30000, Math.round((+h.value || 0) * 60 + (+m.value || 0)))); };
 function campHrsHTML(f){
+  const mode = campHMode(f), n = f.from && f.to >= f.from ? campDayList(f).length : 0;
+  const tog = `<div class="pl-tabs" role="group" aria-label="Erfassung der Trainingszeit">${[['total', 'Gesamt für den Zeitraum'], ['day', 'Pro Tag']].map(([k, l]) => `<button type="button" class="av-chip" data-cphm="${k}" aria-pressed="${mode === k}">${l}</button>`).join('')}</div>`;
+  if (mode === 'total'){ const per = (m, l) => m ? `${l} ca. ${fmtHM(m / n)}` : '';
+    const info = n && (f.totOn || f.totOff) ? `Ergibt pro Tag ${[per(f.totOn, 'On-Ice'), per(f.totOff, 'Off-Ice')].filter(Boolean).join(' · ')} (${n} ${n === 1 ? 'Tag' : 'Tage'}), gleichmässig verteilt.` : 'Gesamte Trainingszeit des Camps bzw. Spezialtrainings. Die App verteilt sie gleichmässig auf die Tage.';
+    return `<div class="cp-hrs"><span class="pe-lbl">Trainingszeiten (für die Trainingsstunden)</span>${tog}
+      <div class="cp-two">${hmPair(f.totOn, 'cp-ton', 'On-Ice gesamt')}${hmPair(f.totOff, 'cp-toff', 'Off-Ice gesamt')}</div>
+      <p class="muted" style="margin:0" id="cp-tinfo">${info} Noch nicht bekannt? Leer lassen und später über «Ändern» erfassen.</p></div>`; }
   const v = x => x === null || x === undefined ? '' : x, D = f.from && f.to >= f.from ? campDayList(f) : [], X = f.dayx || {};
   const rows = D.map(day => { const o = X[day] || {}, lbl = ymdDate(day).toLocaleDateString('de-CH', { weekday:'short', day:'numeric', month:'numeric' });
     return `<div class="cp-hday${o.x ? ' x' : ''}"><span>${lbl}</span>
       <input type="number" inputmode="numeric" min="0" max="720" step="5" class="pselect" data-cphd="${day}|on" value="${v(o.on)}" placeholder="${v(f.on) === '' ? '–' : f.on}" aria-label="${lbl}: On-Ice Minuten" ${o.x ? 'disabled' : ''}>
       <input type="number" inputmode="numeric" min="0" max="720" step="5" class="pselect" data-cphd="${day}|off" value="${v(o.off)}" placeholder="${v(f.off) === '' ? '–' : f.off}" aria-label="${lbl}: Off-Ice Minuten" ${o.x ? 'disabled' : ''}>
       <label class="pe-tog"><input type="checkbox" data-cphx="${day}" ${o.x ? 'checked' : ''}> ausgelassen</label></div>`; }).join('');
-  return `<div class="cp-hrs"><span class="pe-lbl">Trainingszeiten pro Tag (für die Trainingsstunden)</span>
+  return `<div class="cp-hrs"><span class="pe-lbl">Trainingszeiten (für die Trainingsstunden)</span>${tog}
     <div class="cp-two"><div class="cp-f"><label for="cp-hon" class="pe-lbl">On-Ice (Minuten)</label><input type="number" inputmode="numeric" min="0" max="720" step="5" id="cp-hon" class="pselect" value="${v(f.on)}" placeholder="z. B. 120"></div>
       <div class="cp-f"><label for="cp-hoff" class="pe-lbl">Off-Ice (Minuten)</label><input type="number" inputmode="numeric" min="0" max="720" step="5" id="cp-hoff" class="pselect" value="${v(f.off)}" placeholder="z. B. 60"></div></div>
     <p class="muted" style="margin:0">Vorgesehene Zeit pro Tag, bei Privatlektionen die Lektionszeit. Noch nicht bekannt? Leer lassen und später über «Ändern» erfassen.</p>
@@ -5756,14 +5780,15 @@ function renderCamps(){
   $('btn-cp-back').onclick = openParents;
   const redraw = () => { const sc = $('screen-camps'), y = sc.scrollTop; renderCamps(); $('screen-camps').scrollTop = y; };
   if (!campForm){
-    $('btn-cp-new').onclick = () => { campForm = { id:'', kind:campFilter === 'special' ? 'special' : 'camp', booked:false, name:'', place:'', org:'', from:'', to:'', dateOpen:false, when:'', year:'', price:null, stay:null, estimate:false, note:'', on:null, off:null }; renderCamps(); $('screen-camps').scrollTop = 0; };
+    $('btn-cp-new').onclick = () => { campForm = { id:'', kind:campFilter === 'special' ? 'special' : 'camp', booked:false, name:'', place:'', org:'', from:'', to:'', dateOpen:false, when:'', year:'', price:null, stay:null, estimate:false, note:'', on:null, off:null, hmode:'total', totOn:null, totOff:null }; renderCamps(); $('screen-camps').scrollTop = 0; };
     document.querySelectorAll('[data-cp-filter]').forEach(b => b.onclick = () => { campFilter = b.dataset.cpFilter; redraw(); });
     document.querySelectorAll('[data-cp-edit]').forEach(b => b.onclick = () => { const c = camps.find(x => x.id === b.dataset.cpEdit); campForm = Object.assign({}, c, { dateOpen:!c.from }); renderCamps(); $('screen-camps').scrollTop = 0; });
     document.querySelectorAll('[data-cp-del]').forEach(b => b.onclick = () => { const c = camps.find(x => x.id === b.dataset.cpDel); if (!c || !confirm(`«${c.name}» löschen?`)) return; camps.splice(camps.indexOf(c), 1); kommSet('camp|' + c.id, ''); saveCamps(); redraw(); });
     return;
   }
   const read = () => Object.assign(campForm, { name:$('cp-name').value.trim(), place:$('cp-place').value.trim(), org:$('cp-org').value.trim(), from:campForm.dateOpen ? '' : $('cp-from').value, to:campForm.dateOpen ? '' : $('cp-to').value, when:$('cp-when') ? $('cp-when').value.trim() : campForm.when, year:$('cp-year') ? $('cp-year').value : campForm.year, estimate:$('cp-est').checked, note:$('cp-note').value.trim(), price:$('cp-price').value === '' ? null : +$('cp-price').value, stay:!$('cp-stay') || $('cp-stay').value === '' ? null : +$('cp-stay').value,
-    on:hrNum($('cp-hon').value === '' ? null : $('cp-hon').value), off:hrNum($('cp-hoff').value === '' ? null : $('cp-hoff').value), dayx:campReadDays() });
+    ...($('cp-hon') ? { on:hrNum($('cp-hon').value === '' ? null : $('cp-hon').value), off:hrNum($('cp-hoff').value === '' ? null : $('cp-hoff').value), dayx:campReadDays() } : {}),
+    ...($('cp-ton-h') ? { totOn:hmRead('cp-ton'), totOff:hmRead('cp-toff') } : {}), hmode:campHMode(campForm) });
   function campReadDays(){ const X = {};
     Object.entries(campForm.dayx || {}).forEach(([d, o]) => { X[d] = Object.assign({}, o); });   // Tage ausserhalb der Anzeige bleiben erhalten (werden beim Speichern bereinigt)
     document.querySelectorAll('[data-cphd]').forEach(i => { const [d, k] = i.dataset.cphd.split('|'), o = X[d] = X[d] || {}; o[k] = i.value === '' ? null : hrNum(i.value); });
@@ -5773,6 +5798,12 @@ function renderCamps(){
   $('cp-from').onchange = () => { if (!$('cp-to').value || $('cp-to').value < $('cp-from').value) $('cp-to').value = $('cp-from').value; len(); redraw(); };
   $('cp-to').onchange = () => { len(); redraw(); }; len();
   document.querySelectorAll('[data-cphx]').forEach(i => i.onchange = () => { read(); redraw(); });
+  ['cp-ton-h', 'cp-ton-m', 'cp-toff-h', 'cp-toff-m'].forEach(id => { const i = $(id); if (i) i.onchange = () => { read(); redraw(); }; });
+  document.querySelectorAll('[data-cphm]').forEach(b => b.onclick = () => { read(); const to = b.dataset.cphm, f = campForm; if (campHMode(f) === to) return;
+    const n = f.from && f.to >= f.from ? campDayList(f).length : 0;
+    if (to === 'total'){ if (n && f.totOn == null && f.totOff == null){ let on = 0, off = 0, any = false; campDayList(f).forEach(d => { const x = campDay(f, d); if (!x.x){ if (x.on != null || x.off != null) any = true; on += x.on || 0; off += x.off || 0; } }); if (any){ f.totOn = on || null; f.totOff = off || null; } } }   // Vorschlag: Summe der Tageszeiten
+    else if (n && f.on == null && f.off == null){ const r = m => m == null ? null : Math.round(m / n / 5) * 5; f.on = r(f.totOn); f.off = r(f.totOff); }   // Vorschlag: Gesamtzeit geteilt durch Tage
+    f.hmode = to; redraw(); });
   document.querySelectorAll('[data-cp-kind]').forEach(b => b.onclick = () => { read(); campForm.kind = b.dataset.cpKind; redraw(); });
   document.querySelectorAll('[data-cp-book]').forEach(b => b.onclick = () => { read(); campForm.booked = b.dataset.cpBook === '1'; redraw(); });
   $('cp-open').onchange = e => { read(); campForm.dateOpen = e.target.checked; redraw(); };
