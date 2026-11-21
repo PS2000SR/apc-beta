@@ -1037,6 +1037,11 @@ body.voice-off .stage .coach p{font-size:clamp(1.4rem,3.6vw,2rem)}
 .cp-tag{font-size:.72rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--ice)}
 .cp-card.special .cp-tag{color:var(--gold)}
 .cp-card b{font-size:1.05rem;overflow-wrap:anywhere}
+/* Turniere (APC 2.3) */
+.cp-card.tour{border-left-color:var(--ok)} .cp-card.tour .cp-tag{color:var(--ok)} .pc.camp.tour{border-left-color:var(--ok);color:var(--ok)}
+.cp-card .cp-tcnt{grid-column:1/-1;margin-top:8px}
+.cp-card .cp-tcnt b{font-size:1rem;min-width:1.4em;text-align:center}
+.cp-tst{grid-column:1/-1;margin:6px 0 0;font-size:.85rem}
 .cp-price{font-weight:800;text-align:right;white-space:nowrap}
 .cp-meta{grid-column:1/-1;color:var(--muted);overflow-wrap:anywhere}
 .cp-acts{grid-column:1/-1;display:flex;gap:16px;margin-top:4px}
@@ -1488,9 +1493,16 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.24';
+const APP_VERSION = '2.3';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.3', date:'21.11.2026',
+    neu:['Neu heisst der Bereich «Camps, Spezialtrainings und Turniere». Als dritte Art lassen sich Turniere ausserhalb des Clubs erfassen: Name, Ort, Veranstalter, Team, Von/Bis, Startgeld, Übernachtung und Reisekosten.',
+         'Turnierstatistik: Ab dem ersten Turniertag auf der Karte Spiele, Tore, Assists, Strafen und Platzierung erfassen. Die Werte erscheinen in der Saison unter Fortschritt → Matches und im Bericht. Tore geben +20 XP, Assists +15 XP (höchstens 100 XP pro Spiel).',
+         'Reisekosten für alle Einträge (Camps, Spezialtrainings, Turniere): im Kostentotal, auf der Karte, im Bericht und im PDF.',
+         'Wochenplan: Turniertage mit Pokal-Symbol. Neuer Filter «Turniere».',
+         'Turniere zählen nicht in die Trainingsstunden und geben keine Extra-Schicht-XP (wie Matches). Turniere des Clubs werden weiterhin im Wochenplan bestätigt.'],
+    fix:[] },
   { v:'2.24', date:'19.11.2026',
     neu:['Camps und Spezialtrainings: Die Kontrolle unter der Gesamtzeit zeigt jetzt auch den Zeitraum (z. B. «122 Tage, 1.4.–31.7.2026»).'],
     fix:['Camps und Spezialtrainings: Das Bis-Datum lässt sich auf dem iPad wieder zuverlässig wählen. Bisher baute sich das Formular nach jeder Datumsänderung neu auf, wodurch sich der Datumswähler schliessen konnte.'] },
@@ -3862,12 +3874,15 @@ document.addEventListener('click', e => {
   clubRedraw();
 });
 const painSrcTxt = s => s === 'training' ? 'nach Training' : s === 'club' ? 'Club-Training' : 'Check-in';
-/* Camps und Spezialtrainings: apc.camps.v1 [{ id, kind:'camp'|'special', name, place, org, from, to, price, stay, booked, when, year, estimate, note }]
-   stay = Übernachtungskosten (nur Camps). from/to leer = Datum offen (dann when = ungefähr wann, year = Jahr für die Kosten). price null = Preis offen. (Daten als JJJJ-MM-TT).
+/* Camps, Spezialtrainings und Turniere: apc.camps.v1 [{ id, kind:'camp'|'special'|'tour', name, place, org, team, from, to, price, stay, travel, booked, when, year, estimate, note }]
+   stay = Übernachtungskosten (Camps und Turniere), travel = Reisekosten (alle Arten, APC 2.3). from/to leer = Datum offen (dann when = ungefähr wann, year = Jahr für die Kosten). price null = Preis offen. (Daten als JJJJ-MM-TT).
+   Turniere (APC 2.3): ausserhalb des Clubs, team = Mannschaft (frei); keine Trainingszeiten, keine Extra-Schicht-XP; Statistik in apc.games.v1 unter 'tour|<id>'.
    Nur Elterninfo: im Wochenplan, im Mission Center (ohne Status) und im Bericht. Liegt in der Sicherung (alle apc.*-Schlüssel). */
 const camps = store.get('apc.camps.v1', []);
 const saveCamps = () => { store.set('apc.camps.v1', camps); syncExtraXP(); hoursBadges(); };
-const CAMP_KIND = { camp:'Camp', special:'Spezialtraining' };
+const CAMP_KIND = { camp:'Camp', special:'Spezialtraining', tour:'Turnier' };
+const isTour = c => !!c && c.kind === 'tour';
+const CAMP_TITLE = 'Camps, Spezialtrainings und Turniere';
 /* Recovery (Sauna, Whirlpool) nur im Eltern-Bereich: apc.recov.v1 { 'JJJJ-MM-TT': { sauna:Min, whirl:Min } } (0 = nicht gemacht) */
 const recov = store.get('apc.recov.v1', {});
 const saveRecov = () => { Object.keys(recov).forEach(k => { if (!recov[k].sauna && !recov[k].whirl) delete recov[k]; }); store.set('apc.recov.v1', recov); };
@@ -3938,35 +3953,48 @@ document.addEventListener('click', e => { const b = e.target.closest && e.target
    Zählt nur, wenn das Match im Eltern-Bereich als «Gemacht» bestätigt ist; die Zähler erscheinen erst dann.
    XP: +20 pro Tor, +15 pro Assist, höchstens 100 pro Match. progress.gameXP { day:xp } – der Abgleich ist idempotent,
    Korrekturen passen die XP an. Strafen: nur Information (keine XP, keine Abzeichen).
-   Club-Saison: 1. August bis 31. Juli (z. B. 2026/27). Cloud-Abgleich pro Tag, der neuere Stand gilt. */
+   Club-Saison: 1. August bis 31. Juli (z. B. 2026/27). Cloud-Abgleich pro Tag, der neuere Stand gilt.
+   Turniere ausserhalb des Clubs (APC 2.3): 'tour|<id>' { n:Spiele, g, a, p, r:Platzierung (0 = offen), at } – zählen, sobald das Turnier
+   gebucht ist, begonnen hat und Werte erfasst sind; XP höchstens 100 pro Spiel. Erscheinen als ein Eintrag in der Saison (Datum = Turnierbeginn). */
 const GAMES_KEY = 'apc.games.v1', GOAL_XP = 20, ASSIST_XP = 15, GAME_XP_MAX = 100;
 let gamesMem = null;
 function gamesStore(){ if (!gamesMem){ try { gamesMem = JSON.parse(localStorage.getItem(GAMES_KEY) || '{}') || {}; } catch(e){ gamesMem = {}; } } return gamesMem; }
 const gameStat = day => { const x = gamesStore()[day] || {}; return { g:x.g || 0, a:x.a || 0, p:x.p || 0 }; };
 const gameDone = day => { const v = (clubLog()[day] || {}).game; return !!v && v.s === 'done'; };
-const gameXPof = x => Math.min(GAME_XP_MAX, x.g * GOAL_XP + x.a * ASSIST_XP);
+const gameXPof = x => Math.min(GAME_XP_MAX * Math.max(1, x.games || 1), x.g * GOAL_XP + x.a * ASSIST_XP);
+const tourKey = id => 'tour|' + id;
+const tourStat = id => { const x = gamesStore()[tourKey(id)] || {}; return { n:x.n || 0, g:x.g || 0, a:x.a || 0, p:x.p || 0, r:x.r || 0 }; };
+const tourHasStat = x => !!(x.n || x.g || x.a || x.p || x.r);
+const tourReached = c => isTour(c) && !!c.booked && !!c.from && c.from <= ymd(new Date());
+const tourWhat = (c, x) => `Turnier: ${c.name || ''}`.trim() + (x.n || x.r ? ` (${[x.n ? `${x.n} Spiel${x.n === 1 ? '' : 'e'}` : '', x.r ? `${x.r}. Platz` : ''].filter(Boolean).join(', ')})` : '');
 const gameSeason = day => { const [y, m] = day.split('-').map(Number); return m >= 8 ? y : y - 1; };
 const seasonLbl = y => `${y}/${String((y + 1) % 100).padStart(2, '0')}`;
 const curSeason = () => gameSeason(ymd(new Date()));
-/* Alle bestätigten Matches, nach Datum: [{ day, g, a, p, pts, kind }] */
+/* Alle bestätigten Matches und erfassten Turniere, nach Datum: [{ day, key, g, a, p, pts, kind, games, what, tid, r }] */
 function gameList(season){
   const L = clubLog();
-  return Object.keys(L).filter(day => L[day].game && L[day].game.s === 'done' && (season === undefined || gameSeason(day) === season)).sort()
-    .map(day => { const x = gameStat(day), pl = planFor(ymdDate(day)); return Object.assign({ day, pts:x.g + x.a, kind:pl.match ? 'Match' : pl.tour ? 'Turnier' : 'Match' }, x); });
+  const club = Object.keys(L).filter(day => L[day].game && L[day].game.s === 'done' && (season === undefined || gameSeason(day) === season))
+    .map(day => { const x = gameStat(day), pl = planFor(ymdDate(day)), kind = pl.match ? 'Match' : pl.tour ? 'Turnier' : 'Match'; return Object.assign({ day, key:day, pts:x.g + x.a, kind, what:kind, games:1 }, x); });
+  const tours = camps.filter(c => tourReached(c) && (season === undefined || gameSeason(c.from) === season))
+    .map(c => ({ c, x:tourStat(c.id) })).filter(o => tourHasStat(o.x))
+    .map(({ c, x }) => ({ day:c.from, key:tourKey(c.id), g:x.g, a:x.a, p:x.p, r:x.r, pts:x.g + x.a, kind:'Turnier', what:tourWhat(c, x), games:Math.max(1, x.n), tid:c.id }));
+  return club.concat(tours).sort((a, b) => a.day < b.day ? -1 : a.day > b.day ? 1 : 0);
 }
 function gameTotals(L){
-  const t = L.reduce((s, x) => ({ n:s.n + 1, g:s.g + x.g, a:s.a + x.a, p:s.p + x.p }), { n:0, g:0, a:0, p:0 });
+  const t = L.reduce((s, x) => ({ n:s.n + (x.games || 1), g:s.g + x.g, a:s.a + x.a, p:s.p + x.p }), { n:0, g:0, a:0, p:0 });
   t.pts = t.g + t.a; t.ppg = t.n ? t.pts / t.n : 0;
   let run = 0; t.streak = 0; L.forEach(x => { run = x.pts ? run + 1 : 0; t.streak = Math.max(t.streak, run); });
-  t.best = L.reduce((b, x) => !b || x.pts > b.pts ? x : b, null); if (t.best && !t.best.pts) t.best = null;
-  t.bestG = L.reduce((b, x) => !b || x.g > b.g ? x : b, null); if (t.bestG && !t.bestG.g) t.bestG = null;
+  const one = L.filter(x => (x.games || 1) === 1);   // Bestwerte «in einem Match»: Turniere mit mehreren Spielen zählen nicht
+  t.best = one.reduce((b, x) => !b || x.pts > b.pts ? x : b, null); if (t.best && !t.best.pts) t.best = null;
+  t.bestG = one.reduce((b, x) => !b || x.g > b.g ? x : b, null); if (t.bestG && !t.bestG.g) t.bestG = null;
+  t.tours = L.filter(x => x.tid).length;
   return t;
 }
 /* Werte für die Abzeichen (stats() → badgeProgress) */
 function gameBadgeStats(){
   try { const L = gameList(), bySeason = {};
     L.forEach(x => { const y = gameSeason(x.day); bySeason[y] = (bySeason[y] || 0) + x.pts; });
-    return { goals:L.reduce((s, x) => s + x.g, 0), assists:L.reduce((s, x) => s + x.a, 0), hattrick:L.reduce((m, x) => Math.max(m, x.g), 0), seasonPts:Math.max(0, ...Object.values(bySeason)) };
+    return { goals:L.reduce((s, x) => s + x.g, 0), assists:L.reduce((s, x) => s + x.a, 0), hattrick:L.filter(x => (x.games || 1) === 1).reduce((m, x) => Math.max(m, x.g), 0), seasonPts:Math.max(0, ...Object.values(bySeason)) };
   } catch(e){ return { goals:0, assists:0, hattrick:0, seasonPts:0 }; }
 }
 function saveGames(){ try { localStorage.setItem(GAMES_KEY, JSON.stringify(gamesMem || {})); } catch(e){} }
@@ -3974,7 +4002,7 @@ function saveGames(){ try { localStorage.setItem(GAMES_KEY, JSON.stringify(games
 function syncGameXP(){
   const P = progress, X = P.gameXP || (P.gameXP = {}), since = P.gameSince || '';
   let changed = false;
-  const want = {}; gameList().forEach(x => { if (x.day >= since){ const v = gameXPof(x); if (v) want[x.day] = v; } });
+  const want = {}; gameList().forEach(x => { if (x.day >= since){ const v = gameXPof(x); if (v) want[x.key] = v; } });
   Object.keys(X).forEach(d => { if (want[d] !== X[d]){ P.xp = Math.max(0, (P.xp || 0) - (X[d] || 0)); delete X[d]; changed = true; } });
   Object.keys(want).forEach(d => { if (!X[d]){ X[d] = want[d]; P.xp = (P.xp || 0) + want[d]; changed = true; } });
   if (changed) saveProgress();
@@ -4001,9 +4029,31 @@ document.addEventListener('click', e => {
   if (fresh.length) gameToast(`<b>Neues Abzeichen!</b> ${fresh.map(f => rpEsc(f.name)).join(', ')}`);
   else if (xp1 > xp0) gameToast(`<b>+${xp1 - xp0} XP</b> für ${k === 'g' ? 'das Tor' : 'den Assist'}${xp1 >= GAME_XP_MAX ? ' · Maximum für dieses Match erreicht' : ''}`);
 });
+/* Turnierstatistik (APC 2.3) auf der Karte unter «Camps, Spezialtrainings und Turniere» */
+const TOUR_CNT = [['n', 'Spiele', 15], ['g', 'Tore', 40], ['a', 'Assists', 40], ['p', 'Strafen', 60], ['r', 'Platz', 99]];
+function tourCountersHTML(c){
+  if (!tourReached(c)) return `<p class="muted cp-tst">${c.booked ? 'Spiele, Tore, Assists, Strafen und Platzierung ab dem ersten Turniertag erfassen.' : 'Statistik erst für gebuchte Turniere.'}</p>`;
+  const x = tourStat(c.id), xp = (progress.gameXP || {})[tourKey(c.id)], pts = x.g + x.a;
+  return `<div class="gm-cnt cp-tcnt" role="group" aria-label="Turnierstatistik ${rpEsc(c.name)}">${TOUR_CNT.map(([k, l]) => `<div class="gm-c${k === 'p' ? ' pen' : ''}"><span class="gm-l">${l}</span>
+      <span class="gm-btns"><button type="button" class="gm-b" data-tgm="${c.id}|${k}|-1" aria-label="${l} minus eins" ${x[k] ? '' : 'disabled'}>−</button><b aria-live="polite">${k === 'r' && !x.r ? '–' : x[k]}</b><button type="button" class="gm-b" data-tgm="${c.id}|${k}|1" aria-label="${l} plus eins">+</button></span></div>`).join('')}
+    <small class="gm-sum">${pts} Punkt${pts === 1 ? '' : 'e'}${x.n ? ` in ${x.n} Spiel${x.n === 1 ? '' : 'en'}` : ''}${xp ? ` · +${xp} XP` : ''}</small></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-tgm]'); if (!b) return;
+  const [id, k, d] = b.dataset.tgm.split('|'), c = camps.find(x => x.id === id); if (!c || !tourReached(c)) return;
+  gamesMem = null;   // neu lesen: inzwischen vom anderen Gerät geholte Werte nicht überschreiben
+  const S = gamesStore(), key = tourKey(id), x = Object.assign({ n:0, g:0, a:0, p:0, r:0 }, S[key]), max = (TOUR_CNT.find(t => t[0] === k) || [0, 0, 15])[2];
+  x[k] = Math.max(0, Math.min(max, (x[k] || 0) + +d)); x.at = new Date().toISOString(); S[key] = x; saveGames();
+  const xp0 = (progress.gameXP || {})[key] || 0; syncGameXP(); const fresh = checkBadges(progress); if (fresh.length) saveProgress();
+  const xp1 = (progress.gameXP || {})[key] || 0;
+  if (curScreen === 'camps'){ const sc = $('screen-camps'), y = sc.scrollTop; renderCamps(); $('screen-camps').scrollTop = y; }
+  const nb = document.querySelector(`[data-tgm="${id}|${k}|${d}"]`); if (nb && !nb.disabled) nb.focus();
+  if (fresh.length) gameToast(`<b>Neues Abzeichen!</b> ${fresh.map(f => rpEsc(f.name)).join(', ')}`);
+  else if (xp1 > xp0) gameToast(`<b>+${xp1 - xp0} XP</b> für ${k === 'g' ? 'das Tor' : k === 'a' ? 'den Assist' : 'das Turnier'}`);
+});
 /* Extra-Schicht (APC 1.91, ab 1.92 inkl. Zusatztrainings aus apc.zusatz.v1 mit Status «Gemacht»): Bonus-XP für Zusatztrainings.
    - Zusatz-On-Ice (Tag ohne Eistraining in der Standardwoche), im Eltern-Bereich als «Gemacht» bestätigt
-   - gebuchte Camps und Spezialtrainings: pro Tag, sobald der Tag erreicht ist
+   - gebuchte Camps und Spezialtrainings: pro Tag, sobald der Tag erreicht ist (Turniere nicht)
    Je EXTRA_XP, höchstens EXTRA_MAX pro Woche (Mo–So). Gezählt wird erst ab Einführung (progress.extraSince).
    progress.extraXP { id: { day, xp, label } }. Der Abgleich ist idempotent: Wird eine Bestätigung zurückgenommen
    oder ein Camp gelöscht, gehen die XP wieder weg; nichts wird doppelt gezählt.
@@ -4013,7 +4063,7 @@ function extraCandidates(){
   const out = [], today = ymd(new Date()), L = clubLog();
   Object.keys(L).forEach(day => { const e = L[day]; if (day <= today && e.on && e.on.s === 'done' && planFor(ymdDate(day)).extra) out.push({ id:'ice|' + day, day, label:'Zusatz-Eistraining' }); });
   Object.keys(zusatz).forEach(day => { if (day <= today) (zusatz[day] || []).forEach(z => { if (z.s === 'done') out.push({ id:'zt|' + z.id, day, label:'Zusatztraining: ' + ztArt(z.art) }); }); });
-  camps.filter(c => c.booked && c.from && c.to && c.from <= c.to).forEach(c => {
+  camps.filter(c => c.booked && !isTour(c) && c.from && c.to && c.from <= c.to).forEach(c => {   // Turniere geben keine Extra-Schicht (wie Matches)
     for (let d = ymdDate(c.from), n = 0; ymd(d) <= c.to && ymd(d) <= today && n < 60; d = addDays(d, 1), n++)
       out.push({ id:'camp|' + c.id + '|' + ymd(d), day:ymd(d), label:`${CAMP_KIND[c.kind]}: ${c.name || ''}`.trim() });
   });
@@ -4066,10 +4116,11 @@ const campDate = c => {
 const fmtCHF = n => 'CHF ' + (+n).toFixed(n % 1 ? 2 : 0).replace(/\B(?=(\d{3})+(?!\d))/g, "'");
 const noPrice = c => c.price === null || c.price === undefined;
 const campPrice = c => noPrice(c) ? '–' : (c.estimate ? 'ca. ' : '') + fmtCHF(c.price);
-const campStay = c => c.kind === 'camp' ? c.stay || 0 : 0;
-const campSum = L => L.reduce((s, c) => s + (c.price || 0) + campStay(c), 0);
+const campStay = c => c.kind === 'camp' || c.kind === 'tour' ? c.stay || 0 : 0;
+const campTravel = c => c.travel || 0;
+const campSum = L => L.reduce((s, c) => s + (c.price || 0) + campStay(c) + campTravel(c), 0);
 const campYear = c => c.from ? c.from.slice(0, 4) : c.year || '';
-const campTotal = c => noPrice(c) && !campStay(c) ? 'Preis offen' : (c.estimate ? 'ca. ' : '') + fmtCHF(campSum([c]));
+const campTotal = c => noPrice(c) && !campStay(c) && !campTravel(c) ? 'Preis offen' : (c.estimate ? 'ca. ' : '') + fmtCHF(campSum([c]));
 /* Chips für einen Tag; mit Protokoll e werden ✓ (gemacht), ✗ (ausgelassen) und – (ausgefallen) angehängt */
 function planChipsHTML(d, e, dt){
   const mk = k => !e || !e[k] ? '' : e[k].s === 'done' ? ' ✓' : e[k].s === 'missed' ? ' ✗' : ' –';
@@ -4084,7 +4135,7 @@ function planChipsHTML(d, e, dt){
     d.extra ? '<span class="pc xday">Zusatztraining</span>' : '',
     dt ? recovChipsHTML(dt) : '',
     dt ? ztChipsHTML(dt) : '',
-    ...(dt ? campsOn(dt).map(c => `<span class="pc camp ${c.kind}${c.booked ? '' : ' nb'}">${CAMP_KIND[c.kind]}: ${rpEsc(c.name)}${c.booked ? '' : ' (nicht gebucht)'}</span>`) : []),
+    ...(dt ? campsOn(dt).map(c => `<span class="pc camp ${c.kind}${c.booked ? '' : ' nb'}">${isTour(c) ? '🏆 ' : ''}${CAMP_KIND[c.kind]}: ${rpEsc(c.name)}${c.booked ? '' : ' (nicht gebucht)'}</span>`) : []),
     d.note ? `<span class="pc xday">${rpEsc(d.note)}</span>` : d.custom && !d.extra ? '<span class="pc xday">angepasst</span>' : ''
   ].join('') || '<span class="pc rest">Ruhetag</span>';
 }
@@ -4223,7 +4274,7 @@ const hrNum = v => v === null || v === undefined || v === '' || isNaN(+v) ? null
 const campHMode = c => c.hmode === 'total' || c.hmode === 'day' ? c.hmode : (c.on != null || c.off != null || (c.dayx && Object.keys(c.dayx).length) ? 'day' : 'total');
 const campDay = (c, day) => { if (campHMode(c) === 'total'){ const n = Math.max(1, campDayList(c).length), f = v => v === null || v === undefined || v === '' || isNaN(+v) ? null : +v / n; return { on:f(c.totOn), off:f(c.totOff), x:false, dist:true }; }
   const o = (c.dayx || {})[day] || {}; return { on:hrNum(o.on !== undefined && o.on !== null ? o.on : c.on), off:hrNum(o.off !== undefined && o.off !== null ? o.off : c.off), x:!!o.x }; };
-const campTimesOpen = c => !!c.booked && campDayList(c).some(day => { const x = campDay(c, day); return !x.x && x.on === null && x.off === null; });
+const campTimesOpen = c => !!c.booked && !isTour(c) && campDayList(c).some(day => { const x = campDay(c, day); return !x.x && x.on === null && x.off === null; });
 const hrSetTitle = id => { const s = SETS.find(x => x.id === id); return s ? s.title : id; };
 const hrPlanMin = id => { try { const s = SETS.find(x => x.id === id); return s ? Math.round(buildTimeline(s).total / 60) : 0; } catch(e){ return 0; } };
 /* Alle Einträge im Zeitraum (JJJJ-MM-TT, inkl., höchstens bis heute): [{ day, cat, ice, min, label, est, open }] */
@@ -4237,7 +4288,7 @@ function hoursItems(from, to){
     if (e.on && e.on.s === 'done') out.push({ day, cat:'clubOn', ice:true, min:hrSet.on || 0, label:'Club-Training On-Ice', open:hrSet.on === null });
     if (e.off && e.off.s === 'done') out.push({ day, cat:'clubOff', ice:false, min:hrSet.off || 0, label:'Club-Training Off-Ice', open:hrSet.off === null }); });
   Object.keys(zusatz).forEach(day => { if (inR(day)) (zusatz[day] || []).forEach(z => { if (z.s === 'done') out.push({ day, cat:'zt', art:z.art, ice:ZT_ICE.includes(z.art), min:z.min || 0, label:ztArt(z.art) }); }); });
-  camps.filter(c => c.booked).forEach(c => campDayList(c).forEach(day => { if (!inR(day)) return; const x = campDay(c, day); if (x.x) return;
+  camps.filter(c => c.booked && !isTour(c)).forEach(c => campDayList(c).forEach(day => { if (!inR(day)) return; const x = campDay(c, day); if (x.x) return;   // Turniere zählen nicht
     const label = `${CAMP_KIND[c.kind]}: ${c.name || ''}`.trim(), open = x.on === null && x.off === null;
     if (x.on || open) out.push({ day, cat:'campOn', ice:true, min:x.on || 0, label, open, cid:c.id, dist:x.dist });
     if (x.off) out.push({ day, cat:'campOff', ice:false, min:x.off, label, cid:c.id, dist:x.dist }); }));
@@ -4290,7 +4341,7 @@ function hoursFirstDay(){
   (progress.log || []).concat(progress.partLog || []).forEach(e => d.push(ymd(new Date(e.at))));
   const L = clubLog(); Object.keys(L).forEach(k => { if (L[k].on || L[k].off) d.push(k); });
   Object.keys(zusatz).forEach(k => { if ((zusatz[k] || []).some(z => z.s === 'done')) d.push(k); });
-  camps.filter(c => c.booked && c.from).forEach(c => d.push(c.from));
+  camps.filter(c => c.booked && c.from && !isTour(c)).forEach(c => d.push(c.from));
   return d.sort()[0];
 }
 /* Balken für die Grafik: im Jahr pro Monat, sonst 8 Wochen bis zum Ende des gewählten Zeitraums */
@@ -4410,7 +4461,7 @@ function renderHours(keep){
   sc.innerHTML = `<div class="inner trophies hub">
     <div class="tr-head"><div><p class="eyebrow">Eltern-Bereich</p><h1>Trainings&shy;stunden</h1></div>
       <button class="btn btn-ghost btn-small" id="btn-hr-back"><span class="arrow back" aria-hidden="true"></span> Eltern-Bereich</button></div>
-    <p class="muted pl-hint">Effektive Trainingszeit: APC-Trainings (gemessen, ohne Pausen-Taste), bestätigte Club-Trainings On-Ice und Off-Ice, gemachte Zusatztrainings sowie gebuchte Camps und Spezialtrainings inkl. Privatlektionen. Matches zählen nicht.</p>
+    <p class="muted pl-hint">Effektive Trainingszeit: APC-Trainings (gemessen, ohne Pausen-Taste), bestätigte Club-Trainings On-Ice und Off-Ice, gemachte Zusatztrainings sowie gebuchte Camps und Spezialtrainings inkl. Privatlektionen. Matches und Turniere zählen nicht.</p>
     ${hints.length ? `<section class="an-box hr-hint"><p class="eyebrow">Noch offen</p><ul class="an-hints">${hints.join('')}</ul></section>` : ''}
     <section class="an-box">${clubDurHTML()}</section>
     ${hoursBodyHTML(true)}
@@ -5284,7 +5335,7 @@ function gamesChartSVG(L){
   const grid = ticks.map(v => `<line x1="${pl}" x2="${W - pr}" y1="${f(y(v))}" y2="${f(y(v))}" stroke="var(--line)" stroke-width="1"/><text x="${pl - 8}" y="${f(y(v) + 4)}" fill="var(--muted)" font-size="12" text-anchor="end">${v}</text>`).join('');
   const P = C.map((v, i) => [x(i), y(v)]);
   const line = P.length > 1 ? `<polyline points="${P.map(q => f(q[0]) + ',' + f(q[1])).join(' ')}" fill="none" stroke="var(--ice)" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"/>` : '';
-  const dots = P.map((q, i) => `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="${L[i].pts ? 6 : 4}" fill="${L[i].pts ? 'var(--ice)' : 'var(--panel)'}" stroke="var(--ice)" stroke-width="2.5"><title>${fmtDM(ymdDate(L[i].day))}: ${L[i].g} T, ${L[i].a} A · total ${C[i]}</title></circle>`).join('');
+  const dots = P.map((q, i) => `<circle cx="${f(q[0])}" cy="${f(q[1])}" r="${L[i].pts ? 6 : 4}" fill="${L[i].pts ? 'var(--ice)' : 'var(--panel)'}" stroke="var(--ice)" stroke-width="2.5"><title>${fmtDM(ymdDate(L[i].day))}${L[i].tid ? ' ' + rpEsc(L[i].what) : ''}: ${L[i].g} T, ${L[i].a} A · total ${C[i]}</title></circle>`).join('');
   const lab = P.map((q, i) => (L.length <= 10 || i % Math.ceil(L.length / 10) === 0 || i === L.length - 1) ? `<text x="${f(q[0])}" y="${H - 8}" fill="var(--muted)" font-size="12" text-anchor="middle">${fmtDM(ymdDate(L[i].day))}</text>` : '').join('');
   const last = P.length ? `<text x="${f(P[P.length - 1][0])}" y="${f(P[P.length - 1][1] - 12)}" fill="var(--text)" font-size="14" font-weight="700" text-anchor="${L.length > 1 ? 'end' : 'middle'}">${cum}</text>` : '';
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Punkte über die Saison: ${cum} Punkte in ${L.length} Matches">${grid}${line}${dots}${last}${lab}</svg>`;
@@ -5306,18 +5357,18 @@ function openGames(){
     ${seasons.length > 1 ? `<div class="pl-tabs" role="group" aria-label="Saison wählen">${seasons.map(y => `<button class="av-chip" data-gms="${y}" aria-pressed="${y === gamesSeason}">Saison ${seasonLbl(y)}</button>`).join('')}</div>` : `<p class="muted gm-season">Club-Saison ${seasonLbl(gamesSeason)} (August bis Juli)</p>`}
     <div class="gm-kpis">${kpi.map(([v, l], i) => `<div class="gm-kpi${i === 3 ? ' hi' : ''}${i === 5 ? ' pen' : ''}"><b>${v}</b><small>${l}</small></div>`).join('')}</div>
     ${!L.length ? `<section class="an-box"><p class="eyebrow">Noch keine Matches</p><h3>Bereit fürs erste Tor?</h3>
-        <p class="muted">Nach jedem Match bestätigen die Eltern im Eltern-Bereich «Gemacht» und tragen Tore, Assists und Strafen ein. Hier entsteht dann deine Saison.</p></section>`
+        <p class="muted">Nach jedem Match bestätigen die Eltern im Eltern-Bereich «Gemacht» und tragen Tore, Assists und Strafen ein. Turniere ausserhalb des Clubs erfassen sie unter «${CAMP_TITLE}». Hier entsteht dann deine Saison.</p></section>`
     : `<section class="an-box gm-chart"><p class="eyebrow">Punkte über die Saison</p>${gamesChartSVG(L)}
-        <p class="muted gm-cap">Jeder Punkt ist ein Match · Linie = Punkte (Tore + Assists) zusammengezählt · leerer Kreis = Match ohne Punkt</p></section>
+        <p class="muted gm-cap">Jeder Punkt ist ein Match oder ein Turnier · Linie = Punkte (Tore + Assists) zusammengezählt · leerer Kreis = Match ohne Punkt</p></section>
       <div class="gm-best">${best.map(([l, v, d]) => `<div class="gm-bv"><small>${l}</small><b>${v}</b><span>${d}</span></div>`).join('')}</div>
       <section class="an-box"><p class="eyebrow">Letzte Matches</p>
         <table class="gm-tab"><thead><tr><th>Datum</th><th class="r">Tore</th><th class="r">Assists</th><th class="r">Punkte</th><th class="r">Strafen</th></tr></thead><tbody>
-        ${L.slice().reverse().slice(0, 10).map(x => `<tr${T.best && x.day === T.best.day ? ' class="best"' : ''}><td>${ymdDate(x.day).toLocaleDateString('de-CH', { weekday:'short', day:'numeric', month:'numeric' })}<small>${x.kind}</small></td><td class="r">${x.g}</td><td class="r">${x.a}</td><td class="r"><b>${x.pts}</b></td><td class="r">${x.p || '–'}</td></tr>`).join('')}
+        ${L.slice().reverse().slice(0, 10).map(x => `<tr${T.best && x.day === T.best.day ? ' class="best"' : ''}><td>${ymdDate(x.day).toLocaleDateString('de-CH', { weekday:'short', day:'numeric', month:'numeric' })}<small>${rpEsc(x.what || x.kind)}</small></td><td class="r">${x.g}</td><td class="r">${x.a}</td><td class="r"><b>${x.pts}</b></td><td class="r">${x.p || '–'}</td></tr>`).join('')}
         </tbody></table>${L.length > 10 ? `<p class="muted gm-cap">${L.length - 10} ältere Matches im Bericht (Eltern-Bereich).</p>` : ''}</section>`}
     <section class="an-box"><p class="eyebrow">Abzeichen für Matches</p>
       <div class="gm-badges">${GAME_BADGES.map(id => BADGES.find(b => b.id === id)).filter(Boolean).map(b => { const on = !!got[b.id], pr = badgeProgress(b, stats(progress));
         return `<div class="gm-bd${on ? ' on' : ''}">${badgeSVG(b, on)}<b>${b.name}</b><small>${on ? 'Erreicht' : `${pr.cur} / ${pr.n}`}</small></div>`; }).join('')}</div>
-      <p class="muted gm-cap">Tore geben +${GOAL_XP} XP, Assists +${ASSIST_XP} XP, höchstens ${GAME_XP_MAX} XP pro Match. Strafen zählen nur in der Statistik.</p></section>
+      <p class="muted gm-cap">Tore geben +${GOAL_XP} XP, Assists +${ASSIST_XP} XP, höchstens ${GAME_XP_MAX} XP pro Match (bei Turnieren pro Spiel). Strafen zählen nur in der Statistik.</p></section>
   </div>`;
   $('btn-gm-back').onclick = openProgress;
   document.querySelectorAll('#screen-games [data-gms]').forEach(b => b.onclick = () => { gamesSeason = +b.dataset.gms; openGames(); });
@@ -5629,7 +5680,7 @@ function renderParents(){
     </div></div>
     ${painParentsHTML()}
     <div class="parents"><div class="pbox backup" id="box-camps">
-      <p class="eyebrow">Camps und Spezialtrainings</p>
+      <p class="eyebrow">${CAMP_TITLE}</p>
       <p>${campTeaser()}</p>
       <div class="bk-row"><button class="btn btn-primary btn-small" id="btn-camps">Öffnen</button></div>
     </div></div>
@@ -5679,7 +5730,7 @@ function renderParents(){
     document.querySelectorAll('[data-del-img]').forEach(b => b.onclick = () => { if (confirm('Dieses Bild entfernen?')){ CardImgs.remove(b.dataset.delImg); redraw(); } }); }
 }
 
-/* ---- Eltern: Camps und Spezialtrainings erfassen (eigene Seite) ---- */
+/* ---- Eltern: Camps, Spezialtrainings und Turniere erfassen (eigene Seite) ---- */
 let campFilter = 'all', campForm = null;
 const campToday = () => ymd(new Date());
 function campTeaser(){
@@ -5689,29 +5740,37 @@ function campTeaser(){
   return camps.length ? `Nichts geplant${cost}` : 'Noch nichts erfasst.';
 }
 /* Kosten pro Jahr, getrennt nach gebucht und noch nicht gebucht; unabhängig vom Filter. Vorbei und nie gebucht zählt nicht. */
-const campSplit = L => ({ camp:L.filter(c => c.kind === 'camp').reduce((s, c) => s + (c.price || 0), 0), stay:L.reduce((s, c) => s + campStay(c), 0), special:campSum(L.filter(c => c.kind === 'special')), total:campSum(L) });
+/* Preise nach Art; Übernachtung und Reisekosten separat (APC 2.3: Turniere und Reisekosten) */
+const campSplit = L => { const pr = k => L.filter(c => c.kind === k).reduce((s, c) => s + (c.price || 0), 0);
+  return { camp:pr('camp'), stay:L.reduce((s, c) => s + campStay(c), 0), special:pr('special'), tour:pr('tour'), travel:L.reduce((s, c) => s + campTravel(c), 0), total:campSum(L) }; };
 const campPast = c => !!c.from && c.to < campToday();
 function campCostHTML(){
   const live = camps.filter(c => c.booked || !campPast(c));
   if (!live.length) return '';
   const cell = (L, v) => `<td class="r">${L.some(c => c.estimate) && v ? 'ca. ' : ''}${fmtCHF(v)}</td>`;
-  const row = (l, L, b) => { const x = campSplit(L), C = L.filter(c => c.kind === 'camp'), S = L.filter(c => c.kind === 'special'); return `<tr><td>${b ? `<b>${l}</b>` : l}</td>${cell(C, x.camp)}${cell(C.filter(campStay), x.stay)}${cell(S, x.special)}<td class="r"><b>${L.some(c => c.estimate) ? 'ca. ' : ''}${fmtCHF(x.total)}</b></td></tr>`; };
+  /* Spalten: Turniere und Reisekosten nur, wenn es solche Einträge gibt */
+  const COLS = [['camp', 'Camps', c => c.kind === 'camp'], ['stay', 'Über&shy;nachtung', c => !!campStay(c)], ['special', 'Spezial&shy;trainings', c => c.kind === 'special'], ['tour', 'Turniere', c => c.kind === 'tour'], ['travel', 'Reise&shy;kosten', c => !!campTravel(c)]]
+    .filter(([k]) => (k !== 'tour' && k !== 'travel') || live.some(k === 'tour' ? isTour : campTravel));
+  const row = (l, L, b) => { const x = campSplit(L); return `<tr><td>${b ? `<b>${l}</b>` : l}</td>${COLS.map(([k, , f]) => cell(L.filter(f), x[k])).join('')}<td class="r"><b>${L.some(c => c.estimate) ? 'ca. ' : ''}${fmtCHF(x.total)}</b></td></tr>`; };
   const group = (title, L) => { if (!L.length) return ''; const ys = [...new Set(L.map(campYear))].sort().reverse();
-    return `<tr class="cp-gr"><td colspan="5">${title}</td></tr>${ys.map(y => row(y || 'Ohne Jahr', L.filter(c => campYear(c) === y))).join('')}${ys.length > 1 ? row('Gesamt', L, true) : ''}`; };
+    return `<tr class="cp-gr"><td colspan="${COLS.length + 2}">${title}</td></tr>${ys.map(y => row(y || 'Ohne Jahr', L.filter(c => campYear(c) === y))).join('')}${ys.length > 1 ? row('Gesamt', L, true) : ''}`; };
   const open = live.filter(noPrice).length;
-  return `<section class="cp-cost"><p class="eyebrow">Kosten</p><table><thead><tr><th>Jahr</th><th class="r">Camps</th><th class="r">Über&shy;nachtung</th><th class="r">Spezial&shy;trainings</th><th class="r">Total</th></tr></thead><tbody>
+  return `<section class="cp-cost"><p class="eyebrow">Kosten</p><table><thead><tr><th>Jahr</th>${COLS.map(([, l]) => `<th class="r">${l}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>
     ${group('Gebucht', live.filter(c => c.booked))}${group('Noch nicht gebucht', live.filter(c => !c.booked))}</tbody></table>
     ${open ? `<p class="muted" style="margin:8px 0 0">${open === 1 ? '1 Eintrag' : open + ' Einträge'} ohne Preis nicht eingerechnet.</p>` : ''}</section>`;
 }
 function campCardHTML(c){
+  const T = isTour(c), ts = T ? tourStat(c.id) : null;
   const badges = [c.booked ? '<span class="cp-st ok">Gebucht</span>' : '<span class="cp-st no">Nicht gebucht</span>', c.from ? '' : '<span class="cp-st">Datum offen</span>',
+    T && ts.r ? `<span class="cp-st ok">${ts.r}. Platz</span>` : '',
     noPrice(c) ? '<span class="cp-st">Preis offen</span>' : c.estimate ? '<span class="cp-st">Preis geschätzt</span>' : '',
     campTimesOpen(c) ? '<span class="cp-st">Zeiten offen</span>' : ''].join('');
-  const hrs = (() => { if (!c.from) return ''; let on = 0, off = 0; campDayList(c).forEach(d => { const x = campDay(c, d); if (!x.x){ on += x.on || 0; off += x.off || 0; } }); return on || off ? `<br>Trainingszeit${campHMode(c) === 'total' ? ' gesamt' : ''}: ${[on ? 'On-Ice ' + fmtHM(on) : '', off ? 'Off-Ice ' + fmtHM(off) : ''].filter(Boolean).join(' · ')}${campHMode(c) === 'total' ? ` (${campLen(c)})` : ''}` : ''; })();
+  const hrs = (() => { if (!c.from || T) return ''; let on = 0, off = 0; campDayList(c).forEach(d => { const x = campDay(c, d); if (!x.x){ on += x.on || 0; off += x.off || 0; } }); return on || off ? `<br>Trainingszeit${campHMode(c) === 'total' ? ' gesamt' : ''}: ${[on ? 'On-Ice ' + fmtHM(on) : '', off ? 'Off-Ice ' + fmtHM(off) : ''].filter(Boolean).join(' · ')}${campHMode(c) === 'total' ? ` (${campLen(c)})` : ''}` : ''; })();
   return `<article class="cp-card ${c.kind}${c.booked ? '' : ' nb'}"><span class="cp-tag">${CAMP_KIND[c.kind]}</span><span class="cp-price">${campTotal(c)}</span>
     <b style="grid-column:1/-1">${rpEsc(c.name)}</b>
-    <span class="cp-meta">${[c.place, c.org].filter(Boolean).map(rpEsc).join(' · ') || 'Ort und Veranstalter offen'}<br>${campDate(c)}${c.from ? ' · ' + campLen(c) : ''}${campStay(c) ? `<br>Camp ${noPrice(c) ? 'offen' : campPrice(c)} + Übernachtung ${fmtCHF(campStay(c))}` : ''}${hrs}</span>
+    <span class="cp-meta">${T && c.team ? `Team: ${rpEsc(c.team)}<br>` : ''}${[c.place, c.org].filter(Boolean).map(rpEsc).join(' · ') || 'Ort und Veranstalter offen'}<br>${campDate(c)}${c.from ? ' · ' + campLen(c) : ''}${campStay(c) || campTravel(c) ? `<br>${T ? 'Startgeld' : CAMP_KIND[c.kind]} ${noPrice(c) ? 'offen' : campPrice(c)}${campStay(c) ? ` + Übernachtung ${fmtCHF(campStay(c))}` : ''}${campTravel(c) ? ` + Reise ${fmtCHF(campTravel(c))}` : ''}` : ''}${hrs}</span>
     <span class="cp-badges">${badges}</span>
+    ${T ? tourCountersHTML(c) : ''}
     ${c.note ? `<p class="cp-note">${rpEsc(c.note)}</p>` : ''}
     ${kommGet('camp|' + c.id) ? `<div class="cp-km">${kommTxtHTML('camp|' + c.id)}</div>` : ''}
     <span class="cp-acts"><button class="cl-link" data-cp-edit="${c.id}">Ändern</button><button class="cl-link" data-cp-del="${c.id}">Löschen</button>${kommBtnHTML('camp|' + c.id, `${CAMP_KIND[c.kind]}: ${c.name}`, 'Kommentar')}</span></article>`;
@@ -5724,18 +5783,20 @@ function campFormHTML(){
     <div class="cp-f"><label for="cp-name" class="pe-lbl">Name</label><input id="cp-name" class="pselect" maxlength="60" value="${rpEsc(f.name)}"></div>
     <div class="cp-f"><label for="cp-place" class="pe-lbl">Ort</label><input id="cp-place" class="pselect" maxlength="60" value="${rpEsc(f.place)}"></div>
     <div class="cp-f"><label for="cp-org" class="pe-lbl">Veranstalter</label><input id="cp-org" class="pselect" maxlength="60" value="${rpEsc(f.org)}"></div>
+    ${f.kind === 'tour' ? `<div class="cp-f"><label for="cp-team" class="pe-lbl">Team</label><input id="cp-team" class="pselect" maxlength="60" placeholder="z. B. U15 Auswahl" value="${rpEsc(f.team || '')}"></div>` : ''}
     <div class="cp-two"><div class="cp-f"><label for="cp-from" class="pe-lbl">Von</label><input type="date" id="cp-from" class="pselect" value="${f.from}" ${f.dateOpen ? 'disabled' : ''}></div>
       <div class="cp-f"><label for="cp-to" class="pe-lbl">Bis</label><input type="date" id="cp-to" class="pselect" value="${f.to}" ${f.dateOpen ? 'disabled' : ''}></div></div>
     <label class="pe-tog"><input type="checkbox" id="cp-open" ${f.dateOpen ? 'checked' : ''}> Datum noch offen</label>
     ${f.dateOpen ? `<div class="cp-two"><div class="cp-f"><label for="cp-when" class="pe-lbl">Ungefähr wann</label><input id="cp-when" class="pselect" maxlength="40" placeholder="z. B. Juli 2027" value="${rpEsc(f.when || '')}"></div>
       <div class="cp-f"><label for="cp-year" class="pe-lbl">Jahr für die Kosten</label><select id="cp-year" class="pselect"><option value="">Noch offen</option>${[0, 1, 2, 3].map(i => String(new Date().getFullYear() + i)).concat(f.year ? [f.year] : []).filter((y, i, A) => A.indexOf(y) === i).map(y => `<option value="${y}" ${f.year === y ? 'selected' : ''}>${y}</option>`).join('')}</select></div></div>` : ''}
     <p class="muted" id="cp-len" aria-live="polite" style="margin:0"></p>
-    <div class="cp-f"><label for="cp-price" class="pe-lbl">Preis (CHF)</label><input type="number" inputmode="decimal" min="0" step="0.05" id="cp-price" class="pselect" value="${f.price === null || f.price === undefined ? '' : f.price}"></div>
-    ${f.kind === 'camp' ? `<div class="cp-f"><label for="cp-stay" class="pe-lbl">Übernachtung (CHF)</label><input type="number" inputmode="decimal" min="0" step="0.05" id="cp-stay" class="pselect" value="${f.stay === null || f.stay === undefined ? '' : f.stay}"></div>` : ''}
+    <div class="cp-f"><label for="cp-price" class="pe-lbl">${f.kind === 'tour' ? 'Startgeld / Preis' : 'Preis'} (CHF)</label><input type="number" inputmode="decimal" min="0" step="0.05" id="cp-price" class="pselect" value="${f.price === null || f.price === undefined ? '' : f.price}"></div>
+    ${f.kind === 'camp' || f.kind === 'tour' ? `<div class="cp-f"><label for="cp-stay" class="pe-lbl">Übernachtung (CHF)</label><input type="number" inputmode="decimal" min="0" step="0.05" id="cp-stay" class="pselect" value="${f.stay === null || f.stay === undefined ? '' : f.stay}"></div>` : ''}
+    <div class="cp-f"><label for="cp-travel" class="pe-lbl">Reisekosten (CHF)</label><input type="number" inputmode="decimal" min="0" step="0.05" id="cp-travel" class="pselect" placeholder="z. B. Bahn, Benzin, Flug" value="${f.travel === null || f.travel === undefined ? '' : f.travel}"></div>
     <label class="pe-tog"><input type="checkbox" id="cp-est" ${f.estimate ? 'checked' : ''}> Betrag ist eine Schätzung</label>
     <p class="muted" style="margin:0">Preis noch nicht bekannt? Feld einfach leer lassen.</p>
-    ${campHrsHTML(f)}
-    <div class="cp-f"><label for="cp-note" class="pe-lbl">Details</label><textarea id="cp-note" class="pselect" maxlength="500" placeholder="z. B. Coaches, Anmeldefrist, Treffpunkt">${rpEsc(f.note || '')}</textarea></div>
+    ${f.kind === 'tour' ? '<p class="muted" style="margin:0">Turniere zählen nicht in die Trainingsstunden. Spiele, Tore, Assists, Strafen und Platzierung werden nach Turnierbeginn auf der Karte erfasst.</p>' : campHrsHTML(f)}
+    <div class="cp-f"><label for="cp-note" class="pe-lbl">Details</label><textarea id="cp-note" class="pselect" maxlength="500" placeholder="${f.kind === 'tour' ? 'z. B. Spielplan, Treffpunkt, Ausrüstung' : 'z. B. Coaches, Anmeldefrist, Treffpunkt'}">${rpEsc(f.note || '')}</textarea></div>
     <p class="pnote" id="cp-msg" aria-live="polite" style="margin:0"></p>
     <div class="bk-row"><button type="submit" class="btn btn-primary btn-small">Speichern</button><button type="button" class="btn btn-ghost btn-small" id="cp-cancel">Abbrechen</button></div></form>`;
 }
@@ -5775,9 +5836,9 @@ function renderCamps(){
   const up = live.filter(c => c.booked), maybe = live.filter(c => !c.booked);
   $('screen-camps').innerHTML = `
   <div class="inner trophies hub">
-    <div class="tr-head"><div><p class="eyebrow">Eltern-Bereich</p><h1 class="cp-title">Camps und Spezial&shy;trainings</h1></div>
+    <div class="tr-head"><div><p class="eyebrow">Eltern-Bereich</p><h1 class="cp-title">Camps, Spezial&shy;trainings und Turniere</h1></div>
       <button class="btn btn-ghost btn-small" id="btn-cp-back"><span class="arrow back" aria-hidden="true"></span> Eltern-Bereich</button></div>
-    ${campForm ? campFormHTML() : `<div class="cp-top"><div class="pl-tabs" role="group" aria-label="Filter">${[['all', 'Alle'], ['camp', 'Camps'], ['special', 'Spezialtrainings'], ['booked', 'Gebucht'], ['open', 'Offen']].map(([k, l]) => `<button class="av-chip" data-cp-filter="${k}" aria-pressed="${campFilter === k}">${l}</button>`).join('')}</div>
+    ${campForm ? campFormHTML() : `<div class="cp-top"><div class="pl-tabs" role="group" aria-label="Filter">${[['all', 'Alle'], ['camp', 'Camps'], ['special', 'Spezialtrainings'], ['tour', 'Turniere'], ['booked', 'Gebucht'], ['open', 'Offen']].map(([k, l]) => `<button class="av-chip" data-cp-filter="${k}" aria-pressed="${campFilter === k}">${l}</button>`).join('')}</div>
       <button class="btn btn-primary btn-small" id="btn-cp-new">Neu erfassen</button></div>
       ${campCostHTML()}
       ${!L.length ? '<p class="muted">Noch keine Einträge.</p>' : ''}
@@ -5788,13 +5849,15 @@ function renderCamps(){
   $('btn-cp-back').onclick = openParents;
   const redraw = () => { const sc = $('screen-camps'), y = sc.scrollTop; renderCamps(); $('screen-camps').scrollTop = y; };
   if (!campForm){
-    $('btn-cp-new').onclick = () => { campForm = { id:'', kind:campFilter === 'special' ? 'special' : 'camp', booked:false, name:'', place:'', org:'', from:'', to:'', dateOpen:false, when:'', year:'', price:null, stay:null, estimate:false, note:'', on:null, off:null, hmode:'total', totOn:null, totOff:null }; renderCamps(); $('screen-camps').scrollTop = 0; };
+    $('btn-cp-new').onclick = () => { campForm = { id:'', kind:campFilter === 'special' || campFilter === 'tour' ? campFilter : 'camp', booked:false, name:'', place:'', org:'', team:'', from:'', to:'', dateOpen:false, when:'', year:'', price:null, stay:null, travel:null, estimate:false, note:'', on:null, off:null, hmode:'total', totOn:null, totOff:null }; renderCamps(); $('screen-camps').scrollTop = 0; };
     document.querySelectorAll('[data-cp-filter]').forEach(b => b.onclick = () => { campFilter = b.dataset.cpFilter; redraw(); });
     document.querySelectorAll('[data-cp-edit]').forEach(b => b.onclick = () => { const c = camps.find(x => x.id === b.dataset.cpEdit); campForm = Object.assign({}, c, { dateOpen:!c.from }); renderCamps(); $('screen-camps').scrollTop = 0; });
-    document.querySelectorAll('[data-cp-del]').forEach(b => b.onclick = () => { const c = camps.find(x => x.id === b.dataset.cpDel); if (!c || !confirm(`«${c.name}» löschen?`)) return; camps.splice(camps.indexOf(c), 1); kommSet('camp|' + c.id, ''); saveCamps(); redraw(); });
+    document.querySelectorAll('[data-cp-del]').forEach(b => b.onclick = () => { const c = camps.find(x => x.id === b.dataset.cpDel); if (!c || !confirm(`«${c.name}» löschen?`)) return; camps.splice(camps.indexOf(c), 1); kommSet('camp|' + c.id, '');
+      if (isTour(c) && gamesStore()[tourKey(c.id)]){ gamesMem = null; const S = gamesStore(); S[tourKey(c.id)] = { n:0, g:0, a:0, p:0, r:0, at:new Date().toISOString() }; saveGames(); }   // Statistik leeren (Cloud übernimmt das Löschen)
+      saveCamps(); syncGameXP(); redraw(); });
     return;
   }
-  const read = () => Object.assign(campForm, { name:$('cp-name').value.trim(), place:$('cp-place').value.trim(), org:$('cp-org').value.trim(), from:campForm.dateOpen ? '' : $('cp-from').value, to:campForm.dateOpen ? '' : $('cp-to').value, when:$('cp-when') ? $('cp-when').value.trim() : campForm.when, year:$('cp-year') ? $('cp-year').value : campForm.year, estimate:$('cp-est').checked, note:$('cp-note').value.trim(), price:$('cp-price').value === '' ? null : +$('cp-price').value, stay:!$('cp-stay') || $('cp-stay').value === '' ? null : +$('cp-stay').value,
+  const read = () => Object.assign(campForm, { name:$('cp-name').value.trim(), place:$('cp-place').value.trim(), org:$('cp-org').value.trim(), from:campForm.dateOpen ? '' : $('cp-from').value, to:campForm.dateOpen ? '' : $('cp-to').value, when:$('cp-when') ? $('cp-when').value.trim() : campForm.when, year:$('cp-year') ? $('cp-year').value : campForm.year, estimate:$('cp-est').checked, note:$('cp-note').value.trim(), price:$('cp-price').value === '' ? null : +$('cp-price').value, stay:!$('cp-stay') || $('cp-stay').value === '' ? null : +$('cp-stay').value, travel:$('cp-travel').value === '' ? null : +$('cp-travel').value, team:$('cp-team') ? $('cp-team').value.trim() : campForm.team || '',
     ...($('cp-hon') ? { on:hrNum($('cp-hon').value === '' ? null : $('cp-hon').value), off:hrNum($('cp-hoff').value === '' ? null : $('cp-hoff').value), dayx:campReadDays() } : {}),
     ...($('cp-ton-h') ? { totOn:hmRead('cp-ton'), totOff:hmRead('cp-toff') } : {}), hmode:campHMode(campForm) });
   function campReadDays(){ const X = {};
@@ -5805,7 +5868,7 @@ function renderCamps(){
   const len = () => { read(); $('cp-len').textContent = campForm.from && campForm.to >= campForm.from ? `Dauer: ${campLen(campForm)}` : ''; };
   /* APC 2.24: Bei Datum und Zeiten nur den Abschnitt «Trainingszeiten» neu aufbauen, nie die Datumsfelder
      (sonst schliesst sich der Datumswähler auf dem iPad, bevor das Datum übernommen ist) */
-  const refreshHrs = () => { read(); const box = document.querySelector('#cp-form .cp-hrs'); if (!box) return; box.outerHTML = campHrsHTML(campForm); bindHrs(); };
+  const refreshHrs = () => { read(); if (campForm.kind === 'tour') return; const box = document.querySelector('#cp-form .cp-hrs'); if (!box) return; box.outerHTML = campHrsHTML(campForm); bindHrs(); };
   $('cp-from').onchange = () => { if (!$('cp-to').value || $('cp-to').value < $('cp-from').value) $('cp-to').value = $('cp-from').value; len(); refreshHrs(); };
   $('cp-to').onchange = () => { len(); refreshHrs(); }; len();
   function bindHrs(){
@@ -5829,15 +5892,16 @@ function renderCamps(){
     if (!f.dateOpen && !f.from){ msg('Bitte «Von» wählen oder «Datum noch offen» ankreuzen.'); return; }
     if (f.from && !f.to) f.to = f.from;
     if (f.from && f.to < f.from){ msg('«Bis» darf nicht vor «Von» liegen.'); return; }
-    if ((f.price !== null && !(f.price >= 0)) || (f.stay !== null && !(f.stay >= 0))){ msg('Bitte einen gültigen Betrag eingeben.'); return; }
-    if (f.kind !== 'camp') f.stay = null;
+    if ((f.price !== null && !(f.price >= 0)) || (f.stay !== null && !(f.stay >= 0)) || (f.travel !== null && f.travel !== undefined && !(f.travel >= 0))){ msg('Bitte einen gültigen Betrag eingeben.'); return; }
+    if (f.kind === 'special') f.stay = null;
+    if (f.kind !== 'tour') f.team = '';
     if (f.from){ f.when = ''; f.year = ''; }
     { const keep = new Set(campDayList(f)), X = {};   // nur Tage im Zeitraum mit echter Abweichung speichern
       Object.entries(f.dayx || {}).forEach(([d, o]) => { if (!keep.has(d)) return; const y = {}; if (o.x) y.x = true; if (o.on !== null && o.on !== undefined) y.on = o.on; if (o.off !== null && o.off !== undefined) y.off = o.off; if (Object.keys(y).length) X[d] = y; });
       f.dayx = Object.keys(X).length ? X : undefined; }
     delete f.dateOpen;
     if (f.id) Object.assign(camps.find(c => c.id === f.id), f); else camps.push(Object.assign({}, f, { id:Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }));
-    saveCamps(); campForm = null; renderCamps();
+    saveCamps(); syncGameXP(); campForm = null; renderCamps();
   };
 }
 function openCamps(){ Voice.stop(); campForm = null; renderCamps(); show('camps'); $('screen-camps').scrollTop = 0; }
@@ -5996,7 +6060,8 @@ function reportFazit(D){
 const RP_CLUB = { done:'#1E9E6A', missed:'#E08A00', cancelled:'#C3CAD4', open:'#7C8796' };
 const RP_CLUB_ROWS = [['on', 'On-Ice'], ['off', 'Off-Ice'], ['game', 'Matches / Turniere']];
 const rpQuote = x => { const n = x.done + x.missed; return n ? Math.round(x.done / n * 100) + ' %' : '–'; };
-const rpCampTotals = D => { const x = campSplit(D.camps); return [['Total Camps', x.camp, false], ['Total Übernachtungen', x.stay, false], ['Total Spezialtrainings', x.special, false], ['Gesamttotal', x.total, true]]; };
+const rpCampTotals = D => { const x = campSplit(D.camps); return [['Total Camps', x.camp, false], ['Total Übernachtungen', x.stay, false], ['Total Spezialtrainings', x.special, false]]
+  .concat(D.camps.some(isTour) ? [['Total Turniere', x.tour, false]] : [], x.travel ? [['Total Reisekosten', x.travel, false]] : [], [['Gesamttotal', x.total, true]]); };
 /* Recovery: Sauna und Whirlpool */
 const rpRecovSum = D => RECOV_KIND.map(([k, n]) => { const L = D.recov.filter(r => r[k]); return { k, n, cnt:L.length, min:L.reduce((s, r) => s + r[k], 0) }; });
 const rpRecovLine = D => rpRecovSum(D).map(x => `${x.n}: ${x.cnt}× · ${x.min} Min`).join(' · ');
@@ -6056,12 +6121,12 @@ function rpZusatzHTML(D){
     </tbody></table></section>`;
 }
 /* Matches (APC 2.0): Summen und Tabelle pro Match */
-const rpGameTot = D => { const t = gameTotals(D.games || []); return `${t.n} Match${t.n === 1 ? '' : 'es'} · ${t.g} Tore · ${t.a} Assists · ${t.pts} Punkte (${t.ppg.toFixed(2).replace('.', ',')} pro Match) · ${t.p} Strafen`; };
+const rpGameTot = D => { const t = gameTotals(D.games || []); return `${t.n} Match${t.n === 1 ? '' : 'es'}${t.tours ? ` (inkl. ${t.tours} Turnier${t.tours === 1 ? '' : 'e'})` : ''} · ${t.g} Tore · ${t.a} Assists · ${t.pts} Punkte (${t.ppg.toFixed(2).replace('.', ',')} pro Match) · ${t.p} Strafen`; };
 function rpGamesHTML(D){
   const L = D.games || []; if (!L.length) return '';
   const t = gameTotals(L);
   return `<section class="rp-sec"><h2>Matches: Tore und Assists</h2><table class="rp-tab rp-grid"><thead><tr><th>Datum</th><th>Spiel</th><th class="r">Tore</th><th class="r">Assists</th><th class="r">Punkte</th><th class="r">Strafen</th></tr></thead><tbody>
-    ${L.map(x => `<tr><td>${rpDate(ymdDate(x.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' })}</td><td>${x.kind}</td><td class="r">${x.g}</td><td class="r">${x.a}</td><td class="r"><b>${x.pts}</b></td><td class="r">${x.p || '–'}</td></tr>`).join('')}
+    ${L.map(x => `<tr><td>${rpDate(ymdDate(x.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' })}</td><td>${rpEsc(x.what || x.kind)}</td><td class="r">${x.g}</td><td class="r">${x.a}</td><td class="r"><b>${x.pts}</b></td><td class="r">${x.p || '–'}</td></tr>`).join('')}
     <tr><td colspan="2"><b>Total</b></td><td class="r"><b>${t.g}</b></td><td class="r"><b>${t.a}</b></td><td class="r"><b>${t.pts}</b></td><td class="r"><b>${t.p || '–'}</b></td></tr></tbody></table>
     <p class="rp-cap">${rpGameTot(D)}${t.best ? ` · Bestes Match: ${t.best.pts} Punkte am ${rpDate(ymdDate(t.best.day))}` : ''}</p></section>`;
 }
@@ -6069,13 +6134,14 @@ function rpKommHTML(D){
   if (!(D.komm || []).length) return '';
   return `<section class="rp-sec"><h2>Kommentare</h2><table class="rp-tab rp-grid rp-km"><thead><tr><th>Datum</th><th>Eintrag</th><th>Status</th><th>Kommentar</th></tr></thead><tbody>
     ${D.komm.map(k => `<tr><td>${rpDate(ymdDate(k.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' })}</td><td>${rpEsc(k.what)}</td><td>${rpEsc(k.st)}</td><td>${rpEsc(k.t)}</td></tr>`).join('')}
-    </tbody></table><p class="rp-cap">Freiwillige Bemerkungen der Eltern zu Club-Trainings, Matches, Zusatztrainings, Camps und Spezialtrainings.</p></section>`;
+    </tbody></table><p class="rp-cap">Freiwillige Bemerkungen der Eltern zu Club-Trainings, Matches, Zusatztrainings, Camps, Spezialtrainings und Turnieren.</p></section>`;
 }
 function rpCampsHTML(D){
   if (!D.camps.length) return '';
-  return `<section class="rp-sec"><h2>Camps und Spezialtrainings</h2><table class="rp-tab rp-grid"><thead><tr><th>Art</th><th>Name</th><th>Ort · Veranstalter</th><th>Datum</th><th class="r">Preis</th><th class="r">Übernachtung</th></tr></thead><tbody>
-    ${D.camps.map(c => `<tr><td>${CAMP_KIND[c.kind]}</td><td><b>${rpEsc(c.name)}</b></td><td>${[c.place, c.org].filter(Boolean).map(rpEsc).join(' · ')}</td><td>${campDate(c)} (${campLen(c)})</td><td class="r">${campPrice(c)}</td><td class="r">${campStay(c) ? fmtCHF(campStay(c)) : '–'}</td></tr>`).join('')}
-    ${rpCampTotals(D).map(([l, v, b]) => `<tr><td colspan="5">${b ? `<b>${l}</b>` : l}</td><td class="r">${b ? `<b>${fmtCHF(v)}</b>` : fmtCHF(v)}</td></tr>`).join('')}</tbody></table></section>`;
+  return `<section class="rp-sec"><h2>${CAMP_TITLE}</h2><table class="rp-tab rp-grid"><thead><tr><th>Art</th><th>Name</th><th>Ort · Veranstalter</th><th>Datum</th><th class="r">Preis</th><th class="r">Übernachtung</th><th class="r">Reise</th></tr></thead><tbody>
+    ${D.camps.map(c => `<tr><td>${CAMP_KIND[c.kind]}</td><td><b>${rpEsc(c.name)}</b>${isTour(c) && c.team ? `<br><small class="rp-d">${rpEsc(c.team)}</small>` : ''}</td><td>${[c.place, c.org].filter(Boolean).map(rpEsc).join(' · ')}</td><td>${campDate(c)} (${campLen(c)})</td><td class="r">${campPrice(c)}</td><td class="r">${campStay(c) ? fmtCHF(campStay(c)) : '–'}</td><td class="r">${campTravel(c) ? fmtCHF(campTravel(c)) : '–'}</td></tr>`).join('')}
+    ${rpCampTotals(D).map(([l, v, b]) => `<tr><td colspan="6">${b ? `<b>${l}</b>` : l}</td><td class="r">${b ? `<b>${fmtCHF(v)}</b>` : fmtCHF(v)}</td></tr>`).join('')}</tbody></table>
+    ${D.camps.some(isTour) ? '<p class="rp-cap">Turniere ausserhalb des Clubs: Tore, Assists und Platzierung stehen unter «Matches: Tore und Assists». Turniere zählen nicht in die Trainingsstunden.</p>' : ''}</section>`;
 }
 function rpClubHTML(D){
   const c = D.club, rows = RP_CLUB_ROWS.filter(([k]) => c[k].plan);
@@ -6405,7 +6471,8 @@ async function buildReportPDF(D){
       ['Tore', 'Assists', 'Punkte', 'Strafen'].forEach((h, i) => txt(h, xs[i], y + 4.5, 8.3, { bold:true, color:C.white, align:'right' })); y += 17; };
     ensure(22 + 17 + 17 * Math.min(3, L.length) + 40); heading('Matches: Tore und Assists'); y += 24; head();
     L.forEach((x, i) => { if (y + 17 > BOTTOM){ newPage(); head(); } if (i % 2) rect(M, y, CW, 17, col('#F6F8FA'));
-      txt(rpDate(ymdDate(x.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' }), M + 6, y + 4.5, 8.2); txt(x.kind, M + .27 * CW, y + 4.5, 8.2);
+      txt(rpDate(ymdDate(x.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' }), M + 6, y + 4.5, 8.2); { const full = clean(x.what || x.kind); let w = full; while (w && fR.widthOfTextAtSize(w, 8.2) > .23 * CW) w = w.slice(0, -1);
+        if (w !== full){ const i = full.indexOf(' ('); w = i > 0 && i <= w.length ? full.slice(0, i) : w.slice(0, Math.max(w.lastIndexOf(' '), 8)).replace(/[\s(,:·]+$/, ''); } txt(w, M + .27 * CW, y + 4.5, 8.2); }
       [x.g, x.a, x.pts, x.p || '–'].forEach((v, j) => txt(String(v), xs[j], y + 4.5, 8.2, { align:'right', bold:j === 2, color:j === 2 ? C.navy : C.text }));
       line(M, y + 17, M + CW, y + 17, C.line); y += 17; });
     ensure(17 + 30); rect(M, y, CW, 17, C.iceL); txt('Total', M + 6, y + 4.5, 8.3, { bold:true, color:C.navy });
@@ -6425,16 +6492,16 @@ async function buildReportPDF(D){
       const S = rpZtSum(D), t = rpZtTot(S);
       ensure(20); y += 6; y += caption(S.map(x => `${x.n}: ${x.done}× · ${x.min} Min`).join(' · ') + ` · Total ${t.done}× gemacht, ${t.min} Min${t.missed ? `, ${t.missed}× ausgelassen` : ''}`) + 14;
     } }
-  // Camps und Spezialtrainings
+  // Camps, Spezialtrainings und Turniere (APC 2.3: Spalte Reise)
   if (D.camps.length){
-    const cx = [M + 6, M + .16 * CW, M + .36 * CW, M + .58 * CW], maxW = [.15, .19, .21, .20].map(f => f * CW), xP = M + .87 * CW;
+    const cx = [M + 6, M + .14 * CW, M + .31 * CW, M + .49 * CW], maxW = [.13, .16, .17, .19].map(f => f * CW), xP = M + .77 * CW, xS = M + .89 * CW;
     const fit = (s, w) => { let t = clean(s); while (t && fR.widthOfTextAtSize(t, 8.2) > w) t = t.slice(0, -1); return t; };
-    const head = () => { rect(M, y, CW, 17, C.navy); ['Art', 'Name', 'Ort · Veranstalter', 'Datum'].forEach((h, i) => txt(h, cx[i], y + 4.5, 8.3, { bold:true, color:C.white })); txt('Preis', xP, y + 4.5, 8.3, { bold:true, color:C.white, align:'right' }); txt('Übernachtung', M + CW - 6, y + 4.5, 8.3, { bold:true, color:C.white, align:'right' }); y += 17; };
-    ensure(22 + 17 + 17 + 62); heading('Camps und Spezialtrainings'); y += 24; head();
+    const head = () => { rect(M, y, CW, 17, C.navy); ['Art', 'Name', 'Ort · Veranstalter', 'Datum'].forEach((h, i) => txt(h, cx[i], y + 4.5, 8.3, { bold:true, color:C.white })); txt('Preis', xP, y + 4.5, 8.3, { bold:true, color:C.white, align:'right' }); txt('Übernacht.', xS, y + 4.5, 8.3, { bold:true, color:C.white, align:'right' }); txt('Reise', M + CW - 6, y + 4.5, 8.3, { bold:true, color:C.white, align:'right' }); y += 17; };
+    ensure(22 + 17 + 17 + 62); heading(CAMP_TITLE); y += 24; head();
     D.camps.forEach((c, i) => { if (y + 17 > BOTTOM){ newPage(); head(); } if (i % 2) rect(M, y, CW, 17, col('#F6F8FA'));
       [CAMP_KIND[c.kind], c.name, [c.place, c.org].filter(Boolean).join(' · '), `${campDate(c)} (${campLen(c)})`].forEach((v, j) => txt(fit(v, maxW[j]), cx[j], y + 4.5, 8.2));
-      txt(campPrice(c), xP, y + 4.5, 8.2, { align:'right' }); txt(campStay(c) ? fmtCHF(campStay(c)) : '–', M + CW - 6, y + 4.5, 8.2, { align:'right' }); line(M, y + 17, M + CW, y + 17, C.line); y += 17; });
-    ensure(4 * 15 + 16); y += 2;
+      txt(campPrice(c), xP, y + 4.5, 8.2, { align:'right' }); txt(campStay(c) ? fmtCHF(campStay(c)) : '–', xS, y + 4.5, 8.2, { align:'right' }); txt(campTravel(c) ? fmtCHF(campTravel(c)) : '–', M + CW - 6, y + 4.5, 8.2, { align:'right' }); line(M, y + 17, M + CW, y + 17, C.line); y += 17; });
+    ensure(rpCampTotals(D).length * 15 + 16); y += 2;
     rpCampTotals(D).forEach(([l, v, b]) => { txt(l, M + 6, y + 3.5, 8.5, { bold:b, color:b ? C.navy : C.text }); txt(fmtCHF(v), M + CW - 6, y + 3.5, 8.5, { bold:b, color:b ? C.navy : C.text, align:'right' }); y += 15; });
     y += 14;
   }
@@ -6450,7 +6517,7 @@ async function buildReportPDF(D){
       [rpDate(ymdDate(k.day), { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' }), k.what, k.st].forEach((v, j) => txt(fit(v, maxW[j]), cx[j], y + 4.5, 8.2));
       L.forEach((l, j) => txt(l, cx[3], y + 4.5 + j * LH, 8.2));
       line(M, y + h, M + CW, y + h, C.line); y += h; });
-    ensure(20); y += 6; y += caption('Freiwillige Bemerkungen der Eltern zu Club-Trainings, Matches, Zusatztrainings, Camps und Spezialtrainings.') + 14;
+    ensure(20); y += 6; y += caption('Freiwillige Bemerkungen der Eltern zu Club-Trainings, Matches, Zusatztrainings, Camps, Spezialtrainings und Turnieren.') + 14;
   }
   // Recovery: Sauna und Whirlpool
   if (D.recov.length){
@@ -8267,7 +8334,8 @@ const Demo = (() => {
   const demoCamps = () => [
     { id:'d1', kind:'camp', name:'Herbstcamp', place:'Beispielort', org:'Beispiel Club', from:inDays(-28), to:inDays(-24), price:750, stay:320, booked:true },
     { id:'d2', kind:'special', name:'Skating-Technik', place:'Beispielort', org:'Coach Muster', from:inDays(1), to:inDays(1), price:120, booked:true, note:'Schlittschuhe frisch schleifen.' },
-    { id:'d3', kind:'camp', name:'Sommer-Hockeycamp', place:'Beispielort', org:'Beispiel Hockey AG', from:'', to:'', when:'Sommer', year:String(new Date().getFullYear() + 1), price:900, estimate:true, booked:false, note:'Coach: A. Muster. Anmeldung bis Ende März.' }];
+    { id:'d3', kind:'camp', name:'Sommer-Hockeycamp', place:'Beispielort', org:'Beispiel Hockey AG', from:'', to:'', when:'Sommer', year:String(new Date().getFullYear() + 1), price:900, estimate:true, booked:false, note:'Coach: A. Muster. Anmeldung bis Ende März.' },
+    { id:'d4', kind:'tour', name:'Pfingstturnier', place:'Beispielort', org:'Beispiel Turnier GmbH', team:'U15 Auswahl', from:inDays(20), to:inDays(22), price:180, stay:240, travel:90, booked:true }];
   function demoData(){
     const ids = MISSIONS.filter(m => !isLocked(m)).map(m => m.id), days = [33,31,28,26,24,21,19,17,14,12,10,7,5,3,1];
     const ST = [2,3,4,3,5,2,3,4,3,4,2,3,5,3,4], FN = [3,2,3,3,2,3,1,3,3,2,3,3,2,3,3];
@@ -8299,7 +8367,7 @@ const Demo = (() => {
     [`Rekorde und Testtag zeigen, wie ${PROFILE.name} besser wird.`, () => openRecords()],
     ['Eltern-Bereich: Club-Trainings, Matches und Turniere bestätigen. Das Mission Center bleibt rein für APC.', () => { openParents(); hl('.clc'); }],
     ['Wochenplan mit echten Daten, Eistraining und Matches, auch für die Folgewoche.', () => hl('#screen-parents .planner')],
-    ['Camps und Spezialtrainings: gebucht oder noch offen, mit Details und Kostentotal pro Jahr.', () => openCamps()],
+    ['Camps, Spezialtrainings und Turniere: gebucht oder noch offen, mit Details, Reisekosten und Kostentotal pro Jahr. Bei Turnieren auch Tore, Assists und Platzierung.', () => openCamps()],
     ['Bericht: APC- und Club-Trainings, Camps, Feedback und Schmerzen, als PDF zum Herunterladen.', () => openReport()]
   ];
   function start(){
