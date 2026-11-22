@@ -18,7 +18,7 @@
   var SP = Storage.prototype, rawGet = SP.getItem, rawSet = SP.setItem, rawRem = SP.removeItem;
   var META = 'apc.sync.v1';
   // apc.cardimg deckt die Auswahl (apc.cardimg.v1) UND die eigenen Bilder (apc.cardimgs.v1) ab – bis APC 2.3 fehlten die Bilder (Tippfehler)
-  var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.'];   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
+  var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.', 'apc.defekt.'];   // apc.defekt: Kopien beschädigter Blöcke (APC 2.32), nur auf dem Gerät   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
   var MERGE = { 'apc.progress.v1':mergeProgress, 'apc.komm.v1':mergeKomm, 'apc.games.v1':mergeKomm };   // Kommentare und Matchstatistik: pro Eintrag der neuere Stand
   var syncable = function(k){ k = String(k); return k.indexOf('apc.') === 0 && !SKIP.some(function(p){ return k.indexOf(p) === 0; }); };
   var enabled = !!(CFG.url && CFG.key);

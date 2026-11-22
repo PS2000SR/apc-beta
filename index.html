@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#09111F">
 <script src="beta.js"></script><!--NUR-BETA: diese Zeile nie in die richtige App übernehmen-->
 <script src="sync.js"></script>
+<script src="rescue.js"></script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <script>if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));}</script>
@@ -1493,9 +1494,12 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.31';
+const APP_VERSION = '2.32';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.32', date:'22.11.2026',
+    neu:['Notfall-Bildschirm: Kann die App nicht starten, erscheint statt einer leeren Seite ein Fenster mit «Neu laden», «Daten sichern» und «Sicherung wiederherstellen».'],
+    fix:['Beschädigte Datenblöcke (z. B. nach einer fehlerhaften Sicherung) verhindern den Start nicht mehr. Die App nimmt für diesen Block den Standardwert und bewahrt den beschädigten Inhalt als Kopie auf dem Gerät auf.'] },
   { v:'2.31', date:'22.11.2026',
     neu:[],
     fix:['Eigene Bilder der Spielerkarte werden nicht mehr in die Cloud hochgeladen, sie bleiben nur auf dem Gerät (wie vorgesehen). Bilder, die bisher versehentlich hochgeladen wurden, löscht die App beim nächsten Abgleich einmalig aus der Cloud. Die Bilder auf dem Gerät bleiben erhalten.'] },
@@ -3161,8 +3165,23 @@ Object.assign(ANIMS, {
 /* =====================================================================
    3. EINSTELLUNGEN & FORTSCHRITT – nur lokal im Browser
    ===================================================================== */
+/* APC 2.32: Jeder Block wird beim Lesen auf die erwartete Art geprüft (Liste, Objekt, Text, Zahl, Ja/Nein –
+   abgeleitet vom Standardwert, bei Standardwert «null» aus STORE_SHAPE). Ein beschädigter Block (kein gültiges
+   JSON oder falsche Art, z. B. nach einer fehlerhaften Sicherung) wird vor dem Ersetzen unverändert als
+   «apc.defekt.<name>» aufbewahrt (nur auf dem Gerät, nicht in der Cloud) – die App startet dann mit dem Standardwert. */
+const STORE_SHAPE = { 'apc.week.v1':'obj', 'apc.planx.v1':'obj', 'apc.feel.v1':'obj' };
 const store = {
-  get(k, f){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : f; }catch(e){ return f; } },
+  shape(x){ return Array.isArray(x) ? 'list' : x === null ? 'null' : typeof x === 'object' ? 'obj' : typeof x; },
+  keep(k, v){ try{ const d = 'apc.defekt.' + String(k).replace(/^apc\./, ''); if (localStorage.getItem(d) === null) localStorage.setItem(d, v);
+    console.warn('APC: beschädigter Datenblock ersetzt, Kopie unter ' + d); }catch(e){} },
+  get(k, f){
+    let v = null; try{ v = localStorage.getItem(k); }catch(e){ return f; }
+    if (!v) return f;
+    let x; try{ x = JSON.parse(v); }catch(e){ store.keep(k, v); return f; }
+    const want = STORE_SHAPE[k] || (f === null || f === undefined ? null : store.shape(f));
+    if (want && store.shape(x) !== want){ store.keep(k, v); return f; }
+    return x;
+  },
   set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
 };
 const settings = Object.assign({ music:true, sfx:true, voice:true, musicStyle:'track:face-off', voiceName:'' }, store.get('apc.settings.v1', {}));
@@ -8426,6 +8445,7 @@ syncExtraXP();
 syncGameXP();
 renderCenter();
 show('center');
+window.APC_ready = true;   // APC 2.32: Start erfolgreich (sonst zeigt rescue.js den Notfall-Bildschirm)
 checkWhatsNew();
 })();
 </script>

@@ -1,6 +1,6 @@
 // APC Beta – Offline-Speicher (eigener Cache-Name, löscht nur Beta-Caches). Neue Versionen werden beim Start geholt (Netz zuerst), offline gilt die zuletzt geladene Version.
-const CACHE = 'apcbeta-v29';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png', './pdf-lib.min.js', './avatar3d.js', './beta.js', './sync.js', './three/three.module.min.js', './three/addons/OrbitControls.js', './three/addons/RoundedBoxGeometry.js', './three/addons/RoomEnvironment.js'];
+const CACHE = 'apcbeta-v30';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png', './pdf-lib.min.js', './avatar3d.js', './beta.js', './sync.js', './rescue.js', './three/three.module.min.js', './three/addons/OrbitControls.js', './three/addons/RoundedBoxGeometry.js', './three/addons/RoomEnvironment.js'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE && k.startsWith('apcbeta-')).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
 self.addEventListener('fetch', e => {
