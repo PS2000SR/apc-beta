@@ -6,6 +6,9 @@
    - Ab APC 1.9: Login-Pflicht. Neue Familien registrieren sich mit Vorname, Name und E-Mail und haben
      zuerst den Status «wartend» (Tabelle public.familien). Erst nach der Freigabe durch den Betreiber
      («aktiv») öffnet sich die App; «deaktiviert» sperrt sie wieder. Die Daten bleiben erhalten.
+   - Ab APC 2.4 (Variante A gegen Datenverlust): Vor jedem Hochladen wird der Cloud-Stand geholt und mit dem
+     Gerät zusammengeführt (Drei-Wege-Vergleich mit dem letzten gemeinsamen Stand). Ergänzungen beider Geräte
+     bleiben erhalten, Löschungen kommen auf dem anderen Gerät an, Unverändertes wird nicht hochgeladen.
    - Nicht in die Cloud: eigene Bilder (Spielerkarte), Coach-Aufnahmen, Name, Darstellung, Musik.
    - Nur öffentliche Angaben im Code (Projekt-Adresse und publishable/anon key). Kein geheimer Schlüssel. */
 (function(){
@@ -19,7 +22,6 @@
   var META = 'apc.sync.v1';
   // apc.cardimg deckt die Auswahl (apc.cardimg.v1) UND die eigenen Bilder (apc.cardimgs.v1) ab – bis APC 2.3 fehlten die Bilder (Tippfehler)
   var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.', 'apc.defekt.'];   // apc.defekt: Kopien beschädigter Blöcke (APC 2.32), nur auf dem Gerät   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
-  var MERGE = { 'apc.progress.v1':mergeProgress, 'apc.komm.v1':mergeKomm, 'apc.games.v1':mergeKomm };   // Kommentare und Matchstatistik: pro Eintrag der neuere Stand
   var syncable = function(k){ k = String(k); return k.indexOf('apc.') === 0 && !SKIP.some(function(p){ return k.indexOf(p) === 0; }); };
   var enabled = !!(CFG.url && CFG.key);
 
@@ -30,13 +32,37 @@
   if (meta.linked === true && !meta.status) meta.status = 'aktiv';   // Geräte, die schon vor 1.9 verbunden waren (auch offline sofort nutzbar)
   if (!meta.device) meta.device = Math.random().toString(36).slice(2, 10);
   function saveMeta(){ try { rawSet.call(LS, META, JSON.stringify(meta)); } catch(e){} }
+
+  // ---- APC 2.4: zwei Vergleichsstände pro Block für das Zusammenführen ----
+  // 1) Abgleich-Basis («apc.sync.b.<Block>», auf dem Gerät gespeichert): letzter Stand, den Gerät und Cloud
+  //    nachweislich gemeinsam hatten. Damit erkennt das Zusammenführen, was jede Seite seither ergänzt,
+  //    geändert oder gelöscht hat.
+  // 2) App-Sicht (nur im Arbeitsspeicher): der Stand, den die laufende App kennt (beim Start geladen oder
+  //    zuletzt selbst gespeichert). Hat der Abgleich inzwischen Neues vom anderen Gerät eingetragen, wird beim
+  //    nächsten Speichern der App zusammengeführt statt überschrieben.
+  // apc.sync.* geht nie in die Cloud und nie in eine Sicherung.
+  var BASE = 'apc.sync.b.';
+  var getBase = function(k){ try { return rawGet.call(LS, BASE + k); } catch(e){ return null; } };
+  var setBase = function(k, v){ try { if (v === null || v === undefined) rawRem.call(LS, BASE + k); else rawSet.call(LS, BASE + k, v); } catch(e){ try { rawRem.call(LS, BASE + k); } catch(x){} } };
+  var appView = {};
+  try { for (var i0 = 0; i0 < LS.length; i0++){ var k0 = LS.key(i0); if (k0 && syncable(k0)) appView[k0] = rawGet.call(LS, k0); } } catch(e){}
   saveMeta();
 
   // ---- Änderungen der App mitschreiben ----
   var pushTimer = null;
   function markDirty(k, del){ if (!syncable(k)) return; meta.dirty[k] = { t:Date.now(), del:!!del }; saveMeta(); schedulePush(); }
-  SP.setItem = function(k, v){ var r = rawSet.call(this, k, v); if (this === LS) markDirty(k, false); return r; };
-  SP.removeItem = function(k){ var r = rawRem.call(this, k); if (this === LS) markDirty(k, true); return r; };
+  SP.setItem = function(k, v){
+    if (this !== LS) return rawSet.call(this, k, v);
+    v = String(v);
+    if (syncable(k)){
+      var cur = rawGet.call(LS, k), seen = appView.hasOwnProperty(k) ? appView[k] : cur;
+      appView[k] = v;
+      // Der Abgleich hat seit dem letzten Lesen der App Neues eingetragen: zusammenführen statt überschreiben
+      if (cur !== null && seen !== null && cur !== seen){ var m = mergeText(k, v, cur, seen); if (m !== null) v = m; }
+    }
+    var r = rawSet.call(LS, k, v); markDirty(k, false); return r;
+  };
+  SP.removeItem = function(k){ var r = rawRem.call(this, k); if (this === LS){ if (syncable(k)) appView[k] = null; markDirty(k, true); } return r; };
   function schedulePush(){ if (!linked()) return; clearTimeout(pushTimer); pushTimer = setTimeout(function(){ push().catch(function(){}); }, 1500); }
 
   // ---- Supabase-Zugriff (REST, ohne Zusatzbibliothek) ----
@@ -88,36 +114,97 @@
 
   // ---- Abgleich ----
   function localKeys(){ var out = []; for (var i = 0; i < LS.length; i++){ var k = LS.key(i); if (k && syncable(k)) out.push(k); } return out; }
-  function push(opt){
+  // Hochladen (APC 2.4): zuerst den aktuellen Cloud-Stand der geänderten Blöcke holen und mit dem Gerät
+  // zusammenführen – so überschreibt ein Gerät nie mehr unbemerkt, was das andere inzwischen gespeichert hat.
+  // Hochladen läuft immer nacheinander (nie zwei gleichzeitig).
+  var pushing = Promise.resolve();
+  function push(opt){ var p = pushing.then(function(){ return pushNow(opt); }); pushing = p.catch(function(){}); return p; }
+  function pushNow(opt){
     if (!linked()) return Promise.resolve(0);
     var D = meta.dirty, keys = Object.keys(D).filter(syncable); if (!keys.length) return Promise.resolve(0);
     var snap = {}; keys.forEach(function(k){ snap[k] = D[k].t; });
-    var ups = keys.filter(function(k){ return !D[k].del; }).map(function(k){ var v = rawGet.call(LS, k); return v === null ? null : { key:k, value:v, device:meta.device }; }).filter(Boolean);
-    var dels = keys.filter(function(k){ return D[k].del || rawGet.call(LS, k) === null; });
-    var ka = !!(opt && opt.keepalive), jobs = [];
-    if (ups.length) jobs.push(api('/rest/v1/kv?on_conflict=user_id,key', { method:'POST', body:ups, keepalive:ka, headers:{ Prefer:'resolution=merge-duplicates,return=minimal' } }));
-    dels.forEach(function(k){ jobs.push(api('/rest/v1/kv?key=eq.' + encodeURIComponent(k), { method:'DELETE', keepalive:ka, headers:{ Prefer:'return=minimal' } })); });
-    return Promise.all(jobs).then(function(){
-      keys.forEach(function(k){ if (meta.dirty[k] && meta.dirty[k].t === snap[k]) delete meta.dirty[k]; });
-      meta.lastPush = new Date().toISOString(); meta.err = ''; saveMeta(); paint(); return keys.length;
-    }, function(e){ meta.err = e.message; saveMeta(); paint(); throw e; });
+    var upKeys = keys.filter(function(k){ return !D[k].del && rawGet.call(LS, k) !== null; });
+    var dels = keys.filter(function(k){ return upKeys.indexOf(k) < 0; });
+    var ka = !!(opt && opt.keepalive), local = {};
+    upKeys.forEach(function(k){ local[k] = rawGet.call(LS, k); });
+    var inList = upKeys.map(function(k){ return '"' + k.replace(/"/g, '') + '"'; }).join(',');
+    var fetchCloud = upKeys.length ? api('/rest/v1/kv?select=key,value&key=in.(' + encodeURIComponent(inList) + ')', { keepalive:ka }) : Promise.resolve([]);
+    return fetchCloud.then(function(rows){
+      var cloud = {}; (rows || []).forEach(function(r){ cloud[r.key] = r.value; });
+      var send = {};
+      upKeys.forEach(function(k){
+        var c = cloud[k], l = local[k], bt = getBase(k);
+        send[k] = (c === undefined || c === l || c === bt) ? l : (mergeText(k, l, c, bt) || l);
+      });
+      // Nur hochladen, was sich von der Cloud unterscheidet. Ein Gerät, das einen Block unverändert neu speichert,
+      // kann so nie gleichzeitig Neues vom anderen Gerät überschreiben.
+      var post = upKeys.filter(function(k){ return send[k] !== cloud[k]; }), jobs = [];
+      if (post.length) jobs.push(api('/rest/v1/kv?on_conflict=user_id,key', { method:'POST', keepalive:ka, headers:{ Prefer:'resolution=merge-duplicates,return=minimal' },
+        body:post.map(function(k){ return { key:k, value:send[k], device:meta.device }; }) }));
+      dels.forEach(function(k){ jobs.push(api('/rest/v1/kv?key=eq.' + encodeURIComponent(k), { method:'DELETE', keepalive:ka, headers:{ Prefer:'return=minimal' } })); });
+      return Promise.all(jobs).then(function(){
+        // Kontrolle: Hat die Cloud jetzt wirklich unseren Stand? Hat das andere Gerät im selben Moment gespeichert,
+        // wird der Block erneut markiert; der nächste Durchgang führt beide Stände zusammen (Basis = Stand davor).
+        if (!post.length) return null;
+        var pl = post.map(function(k){ return '"' + k.replace(/"/g, '') + '"'; }).join(',');
+        return api('/rest/v1/kv?select=key,value&key=in.(' + encodeURIComponent(pl) + ')', { keepalive:ka }).catch(function(){ return null; });
+      }).then(function(after){
+        var lost = {};
+        (after || []).forEach(function(r){ if (r.value !== send[r.key]) lost[r.key] = 1; });
+        upKeys.forEach(function(k){
+          var now = rawGet.call(LS, k), v = send[k];
+          if (v !== local[k]){   // der hochgeladene Stand enthält Neues vom anderen Gerät: auch aufs Gerät
+            if (now === local[k]) rawSet.call(LS, k, v);
+            else if (now !== null){ var m = mergeText(k, now, v, local[k]); if (m !== null) rawSet.call(LS, k, m); }   // App hat inzwischen gespeichert
+            needReload = true;
+          }
+          if (lost[k]){ setBase(k, cloud[k] === undefined ? null : cloud[k]); return; }
+          setBase(k, v);   // die Cloud hat jetzt genau v
+        });
+        dels.forEach(function(k){ if (rawGet.call(LS, k) === null) setBase(k, null); });
+        keys.forEach(function(k){ if (meta.dirty[k] && meta.dirty[k].t === snap[k]) delete meta.dirty[k]; });
+        Object.keys(lost).forEach(function(k){ meta.dirty[k] = { t:Date.now(), del:false }; });
+        if (Object.keys(lost).length){ clearTimeout(pushTimer); pushTimer = setTimeout(function(){ push().catch(function(){}); }, 400 + Math.random() * 1200); }
+        meta.lastPush = new Date().toISOString(); meta.err = ''; saveMeta(); paint(); return keys.length;
+      });
+    }).catch(function(e){ meta.err = e.message; saveMeta(); paint(); throw e; });
   }
   function pull(){
     if (!linked()) return Promise.resolve(0);
-    var q = '/rest/v1/kv?select=key,value,updated_at&order=updated_at.asc' + (meta.lastPull ? '&updated_at=gt.' + encodeURIComponent(meta.lastPull) : '');
+    // Erster Abgleich nach dem Update auf 2.4: einmal alle Blöcke holen, um die Basis anzulegen. Dabei wird nichts
+    // vom Gerät überschrieben – weicht ein Block ab, wird zusammengeführt und hochgeladen.
+    var init = meta.baseInit !== 1;
+    var q = '/rest/v1/kv?select=key,value,updated_at&order=updated_at.asc' + (meta.lastPull && !init ? '&updated_at=gt.' + encodeURIComponent(meta.lastPull) : '');
     return api(q).then(function(rows){
       var changed = 0;
       (rows || []).forEach(function(r){
         if (r.updated_at > (meta.lastPull || '')) meta.lastPull = r.updated_at;
         if (!syncable(r.key)) return;
         var cur = rawGet.call(LS, r.key);
-        if (cur === r.value) return;
+        if (cur === r.value){ if (!meta.dirty[r.key]) setBase(r.key, r.value); return; }
+        if (init && cur !== null && !meta.dirty[r.key]) meta.dirty[r.key] = { t:Date.now(), del:false };   // abweichend: wie eine lokale Änderung behandeln
         if (meta.dirty[r.key]){
-          if (MERGE[r.key]){ try { var m = JSON.stringify(MERGE[r.key](JSON.parse(cur), JSON.parse(r.value))); if (m !== cur){ rawSet.call(LS, r.key, m); changed++; } } catch(e){} }
-          return;   // lokale Änderung bleibt und wird hochgeladen
+          // Gerät hat ungespeicherte Änderungen: zusammenführen, die Basis bleibt bis zum Neuladen
+          var m = cur === null ? null : mergeText(r.key, cur, r.value, getBase(r.key));
+          if (m !== null && m !== cur){ rawSet.call(LS, r.key, m); changed++; }
+          setBase(r.key, r.value);   // die Cloud-Fassung ist jetzt gemeinsamer Stand; das Gerät hat zusätzlich seine Änderungen
+          return;
         }
-        rawSet.call(LS, r.key, r.value); changed++;
+        rawSet.call(LS, r.key, r.value); setBase(r.key, r.value); changed++;
       });
+      // Löschungen vom anderen Gerät: Blöcke, die schon einmal abgeglichen waren (Basis vorhanden), hier nicht
+      // geändert wurden und in der Cloud fehlen, werden auch hier entfernt.
+      return api('/rest/v1/kv?select=key').then(function(all){
+        var inCloud = {}; (all || []).forEach(function(r){ inCloud[r.key] = 1; });
+        localKeys().forEach(function(k){
+          if (inCloud[k] || meta.dirty[k]) return;
+          if (getBase(k) !== null){ rawRem.call(LS, k); setBase(k, null); changed++; }
+          else if (init) meta.dirty[k] = { t:Date.now(), del:false };   // nie hochgeladener Block (z. B. Kopie aus der Hauptversion): jetzt hochladen
+        });
+        if (init) meta.baseInit = 1;
+        return changed;
+      });
+    }).then(function(changed){
       meta.lastSync = new Date().toISOString(); meta.err = ''; saveMeta(); paint();
       if (changed) needReload = true;
       return changed;
@@ -152,28 +239,58 @@
     if (s === undefined || SAFE.indexOf(s) >= 0){ needReload = false; location.reload(); }
   }
 
-  // Zusammenführen von Fortschritt (Trainings, Testtage, Rekorde), wenn beide Geräte gleichzeitig gespeichert haben
-  function mergeProgress(a, b){
-    a = a || {}; b = b || {};
-    var uni = function(x, y, id){ var m = {}, o = []; (y || []).concat(x || []).forEach(function(e){ var k = id(e); if (!(k in m)) o.push(e); m[k] = e; });
-      return o.map(function(e){ return m[id(e)]; }).sort(function(p, q){ return (Date.parse(p && p.at) || 0) - (Date.parse(q && q.at) || 0); }); };
-    var out = Object.assign({}, b, a);
-    out.log = uni(a.log, b.log, function(e){ return (e && e.at) + '|' + (e && e.mission); });
-    out.tests = uni(a.tests, b.tests, function(e){ return e && e.at; });
-    out.partLog = uni(a.partLog, b.partLog, function(e){ return (e && e.at) + '|' + (e && e.mission); });   // APC 2.2: abgebrochene Missionen (Trainingsstunden)
-    out.records = {}; Object.keys(Object.assign({}, b.records, a.records)).forEach(function(k){ out.records[k] = uni((a.records || {})[k], (b.records || {})[k], function(r){ return (r && r.at) + '|' + (r && r.v); }); });
-    out.badges = Object.assign({}, b.badges, a.badges);
-    out.cards = uni(a.cards, b.cards, function(c){ return JSON.stringify(c); });
-    ['xp', 'completed', 'prCount', 'titles'].forEach(function(k){ out[k] = Math.max(a[k] || 0, b[k] || 0); });
-    return out;
+  // ---- APC 2.4: Zusammenführen (Drei-Wege-Vergleich mit der Basis) ----
+  // l = dieses Gerät, c = Cloud, b = gemeinsame Basis (oder undefined, wenn unbekannt).
+  // Was nur eine Seite geändert hat, wird übernommen; Ergänzungen beider Seiten bleiben erhalten; Löschungen gelten.
+  // Ändern beide Seiten denselben einzelnen Wert, gilt dieses Gerät – ausser bei Einträgen mit Zeitstempel «at»
+  // (z. B. Kommentare, Matchstatistik): dort gilt der neuere Eintrag. Zähler im Fortschritt (XP usw.) werden addiert.
+  var COUNTERS = { xp:1, completed:1, prCount:1, titles:1 };
+  var J = function(x){ return JSON.stringify(x); };
+  var isObj = function(x){ return !!x && typeof x === 'object' && !Array.isArray(x); };
+  var withId = function(a){ return Array.isArray(a) && a.length > 0 && a.every(function(e){ return isObj(e) && e.id !== undefined && e.id !== null; }); };
+  function merge3(l, c, b, top){
+    if (J(l) === J(c)) return l;
+    if (b !== undefined){ if (J(l) === J(b)) return c; if (J(c) === J(b)) return l; }
+    if (l === undefined) return c;           // nur auf einer Seite vorhanden (ohne Basis: ergänzen)
+    if (c === undefined) return l;
+    if (isObj(l) && isObj(c)){
+      if (typeof l.at === 'string' && typeof c.at === 'string' && !top) return c.at > l.at ? c : l;
+      var bo = isObj(b) ? b : (b === undefined ? undefined : {}), out = {};
+      Object.keys(Object.assign({}, bo || {}, c, l)).forEach(function(k){
+        var r = merge3(l[k], c[k], bo === undefined ? undefined : bo[k], false);
+        if (top === 'progress' && COUNTERS[k] && typeof l[k] === 'number' && typeof c[k] === 'number')
+          r = (bo && typeof bo[k] === 'number') ? l[k] + c[k] - bo[k] : Math.max(l[k], c[k]);
+        if (r !== undefined) out[k] = r;
+      });
+      return out;
+    }
+    if (Array.isArray(l) && Array.isArray(c)){
+      var ba = Array.isArray(b) ? b : (b === undefined ? undefined : []);
+      if ((withId(l) || !l.length) && (withId(c) || !c.length) && (l.length || c.length) && (!ba || !ba.length || withId(ba))){
+        var mp = function(a){ var m = {}; (a || []).forEach(function(e){ m[J(e.id)] = e; }); return m; };
+        var L = mp(l), C = mp(c), B = ba ? mp(ba) : null, order = [], seen = {};
+        c.concat(l).forEach(function(e){ var k = J(e.id); if (!seen[k]){ seen[k] = 1; order.push(k); } });
+        return order.map(function(k){ return merge3(L[k], C[k], B ? B[k] : undefined, false); }).filter(function(e){ return e !== undefined; });
+      }
+      // Listen ohne Kennung (z. B. Trainingsprotokoll): Ergänzungen beider Seiten, Löschungen relativ zur Basis
+      // Listen ohne Kennung (z. B. Trainingsprotokoll, Tests): als Menge. Ein Eintrag bleibt, wenn ihn beide Seiten
+      // haben oder eine Seite ihn neu hinzugefügt hat; gelöscht ist er, wenn eine Seite ihn aus der Basis entfernt hat.
+      var set = function(a){ var m = {}; (a || []).forEach(function(e){ m[J(e)] = 1; }); return m; };
+      var Ls = set(l), Cs = set(c), Bs = set(ba), res = [], got = {};
+      c.concat(l).forEach(function(e){ var k = J(e); if (got[k]) return; got[k] = 1;
+        var inL = !!Ls[k], inC = !!Cs[k], inB = !!Bs[k];
+        if ((inL && inC) || (!inB && (inL || inC))) res.push(e); });
+      if (res.length && res.every(function(e){ return isObj(e) && typeof e.at === 'string'; }))
+        res = res.map(function(e, i){ return [e, i]; }).sort(function(p, q){ return p[0].at < q[0].at ? -1 : p[0].at > q[0].at ? 1 : p[1] - q[1]; }).map(function(x){ return x[0]; });
+      return res;
+    }
+    return l;   // einzelner Wert, beide geändert: dieses Gerät gilt
   }
-
-  // Kommentare (APC 1.95) und Matchstatistik (APC 2.0): pro Eintrag gilt der neuere Stand (Feld «at»)
-  function mergeKomm(a, b){
-    a = a || {}; b = b || {}; var out = {};
-    Object.keys(Object.assign({}, b, a)).forEach(function(k){ var x = a[k], y = b[k];
-      out[k] = !x ? y : !y ? x : (String(y.at || '') > String(x.at || '') ? y : x); });
-    return out;
+  // Zusammenführen zweier gespeicherter Blöcke (Text). Gibt null zurück, wenn nicht möglich (dann gilt dieses Gerät).
+  function mergeText(k, lt, ct, bt){
+    try { var b = bt === null || bt === undefined ? undefined : JSON.parse(bt);
+      var m = merge3(JSON.parse(lt), JSON.parse(ct), b, k === 'apc.progress.v1' ? 'progress' : true);
+      return J(m); } catch(e){ return null; }
   }
 
   // ---- Anmelden, Konto erstellen, erste Verknüpfung ----
@@ -207,15 +324,15 @@
   }
   function useDevice(){
     return api('/rest/v1/kv?key=like.apc.*', { method:'DELETE', headers:{ Prefer:'return=minimal' } }).then(function(){
-      meta.dirty = {}; localKeys().forEach(function(k){ meta.dirty[k] = { t:Date.now(), del:false }; });
+      meta.dirty = {}; localKeys().forEach(function(k){ meta.dirty[k] = { t:Date.now(), del:false }; setBase(k, null); });   // Cloud ist leer: es gibt keinen gemeinsamen Stand
       meta.linked = true; meta.choice = null; meta.lastPull = ''; saveMeta();
       return push().then(function(){ return pull(); }).then(function(){ needReload = false; paint(); return 'device'; });
     });
   }
   function useCloud(){
     return api('/rest/v1/kv?select=key,value,updated_at&order=updated_at.asc').then(function(rows){
-      localKeys().forEach(function(k){ rawRem.call(LS, k); });
-      (rows || []).forEach(function(r){ if (syncable(r.key)) rawSet.call(LS, r.key, r.value); if (r.updated_at > (meta.lastPull || '')) meta.lastPull = r.updated_at; });
+      localKeys().forEach(function(k){ setBase(k, null); rawRem.call(LS, k); });
+      (rows || []).forEach(function(r){ if (syncable(r.key)){ rawSet.call(LS, r.key, r.value); setBase(r.key, r.value); } if (r.updated_at > (meta.lastPull || '')) meta.lastPull = r.updated_at; });
       meta.dirty = {}; meta.linked = true; meta.choice = null; meta.lastSync = new Date().toISOString(); saveMeta();
       location.reload(); return 'cloud';
     });
@@ -365,7 +482,8 @@
     document.addEventListener('visibilitychange', function(){
       if (document.visibilityState === 'visible') cycle(); else push({ keepalive:true }).catch(function(){});
     });
-    window.addEventListener('online', function(){ cycle(); });
+    // Kommen beide Geräte gleichzeitig wieder ins Netz, nicht im selben Moment abgleichen (kleiner Zufallsversatz)
+    window.addEventListener('online', function(){ setTimeout(cycle, 300 + Math.random() * 2500); });
   }
-  window.APCSync = { mount:mount, sync:cycle, status:function(){ return { enabled:enabled, logged:logged(), status:meta.status || '', linked:linked(), dirty:Object.keys(meta.dirty).length, lastSync:meta.lastSync }; }, _cfg:CFG };
+  window.APCSync = { mount:mount, sync:cycle, status:function(){ return { enabled:enabled, logged:logged(), status:meta.status || '', linked:linked(), dirty:Object.keys(meta.dirty).length, lastSync:meta.lastSync }; }, _cfg:CFG, _merge:mergeText };
 })();

@@ -1494,9 +1494,14 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.32';
+const APP_VERSION = '2.4';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.4', date:'22.11.2026',
+    neu:['Cloud-Abgleich: Vor jedem Hochladen holt die App den aktuellen Stand aus der Cloud und führt ihn mit dem Gerät zusammen. Trainings, Camps, Club-Trainings, Zusatztrainings und Kommentare von beiden iPads bleiben erhalten, auch wenn beide kurz nacheinander speichern.',
+         'Löschungen (z. B. ein Camp) kommen jetzt auch auf dem anderen iPad an.',
+         'XP von beiden iPads werden zusammengezählt statt nur der höhere Wert übernommen.'],
+    fix:['Bisher konnte ein iPad beim Speichern ein Training vom anderen iPad überschreiben, wenn beide innerhalb etwa einer Minute gespeichert hatten.'] },
   { v:'2.32', date:'22.11.2026',
     neu:['Notfall-Bildschirm: Kann die App nicht starten, erscheint statt einer leeren Seite ein Fenster mit «Neu laden», «Daten sichern» und «Sicherung wiederherstellen».'],
     fix:['Beschädigte Datenblöcke (z. B. nach einer fehlerhaften Sicherung) verhindern den Start nicht mehr. Die App nimmt für diesen Block den Standardwert und bewahrt den beschädigten Inhalt als Kopie auf dem Gerät auf.'] },
