@@ -1386,6 +1386,32 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
   #print-root .rp-two{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   #print-root *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 }
+/* APC 2.5: Vorbereitungsphase mit Countdown */
+.ph-snow{--phc:var(--ice)}.ph-cup{--phc:var(--gold)}.ph-flag{--phc:var(--red)}.ph-bolt{--phc:var(--ok)}
+.ph-ban{margin:0 0 16px;border:1px solid var(--phc);border-left-width:5px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--phc) 16%,var(--panel)),var(--panel));box-shadow:var(--e1)}
+.ph-ban summary{list-style:none;display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer}
+.ph-ban summary::-webkit-details-marker{display:none}
+.ph-ico{font-size:2rem;line-height:1}
+.ph-txt{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+.ph-txt small{color:var(--phc);font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:.72rem}
+.ph-txt b{font-family:var(--f-display);font-size:1.3rem;line-height:1.15;color:var(--text)}
+.ph-bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:4px;max-width:420px}
+.ph-bar i{display:block;height:100%;background:var(--phc);border-radius:3px}
+.ph-sub{color:var(--muted);font-size:.85rem}
+.ph-cd{display:flex;flex-direction:column;align-items:center;min-width:64px;padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--phc) 22%,transparent)}
+.ph-cd b{font-family:var(--f-display);font-size:2.1rem;line-height:1;color:var(--phc)}
+.ph-cd small{color:var(--muted);font-size:.75rem;font-weight:700}
+.ph-det{display:flex;flex-direction:column;gap:2px;padding:0 16px 12px 62px;color:var(--muted)}
+.ph-det b{color:var(--text)}
+.ph-motto{font-style:italic;color:var(--text)}
+.ph-now{border-width:2px;border-left-width:6px}
+.pday.ph{background:color-mix(in srgb,var(--phc) 12%,var(--panel));border-left:4px solid var(--phc)}
+.pday.ph-goal{box-shadow:inset 0 0 0 2px var(--phc)}
+.pday.ph-goal .pd-name small::after{content:" · Ziel";color:var(--phc);font-weight:800}
+.pc.phase{border-left-color:var(--phc);color:var(--phc)}
+.pc-phase{margin:0 0 12px;padding:8px 12px;border-radius:10px;border:1px solid var(--phc);background:color-mix(in srgb,var(--phc) 14%,var(--panel));font-weight:600}
+.pc-phase b{color:var(--phc)}
+.ph-form{display:flex;flex-direction:column;gap:10px}
 </style>
 
 <script>try{if(localStorage.getItem('apc.theme')==='light')document.documentElement.dataset.theme='light';}catch(e){}</script>
@@ -1499,9 +1525,15 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.43';
+const APP_VERSION = '2.5';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.5', date:'22.11.2026',
+    neu:['Vorbereitungsphase mit Countdown: Im Eltern-Bereich unter «Vorbereitungsphase» lässt sich ein Turnier oder Camp aus «Camps, Spezialtrainings und Turniere» als Ziel wählen (z. B. die Winter Challenge), dazu Start der Vorbereitung, Symbol und Motto.',
+         'Im Mission Center zeigt ein Banner «Noch … Tage» mit Fortschrittsbalken und «Tag … von … der Vorbereitung». Antippen zeigt Datum, Ort und Motto. Am Tag selbst steht «Heute: … – viel Erfolg!», danach verschwindet die Anzeige.',
+         'Im Wochenplan sind die Tage der Vorbereitung farbig markiert, der Ziel-Tag hervorgehoben. Auf der Spielerkarte erscheint das Abzeichen «In Vorbereitung».',
+         'Bericht und PDF: eine Zeile im Kurzfazit mit den APC-Trainings und Trainingsstunden während der Vorbereitung.'],
+    fix:[] },
   { v:'2.43', date:'22.11.2026',
     neu:['Die Anzeige «Offline» steht jetzt oben rechts in der Kopfzeile, links neben «Mission Center», etwas grösser. Die Zahl dahinter zeigt, wie viele Änderungen auf das Hochladen warten.',
          'Antippen von «Offline» zeigt eine Erklärung: was ohne Internet passiert, wie viele Änderungen warten und wann zuletzt abgeglichen wurde.'],
@@ -3951,6 +3983,116 @@ const ztStTxt = s => (ZT_ST.find(x => x[0] === s) || ZT_ST[0])[1];
 const zusatzOn = d => zusatz[ymd(d)] || [];
 const ztChipsHTML = d => zusatzOn(d).map(z => `<span class="pc zt ${z.s}">${ztArt(z.art)} ${z.min} Min${z.s === 'done' ? ' ✓' : z.s === 'missed' ? ' ✗' : ''}</span>`).join('');
 const campsOn = d => { const k = ymd(d); return camps.filter(c => c.from && c.from <= k && k <= c.to); };
+/* ---- Vorbereitungsphase mit Countdown (APC 2.5, Konzept 12 Variante B) ----
+   apc.phase.v1 { on, campId, name, date, start, icon, motto, visible, at }
+   Ziel des Countdowns: Beginn des verknüpften Eintrags unter «Camps, Spezialtrainings und Turniere» (folgt Datumsänderungen)
+   oder ein eigenes Datum. Sichtbar vom Start der Vorbereitung bis und mit dem Ziel-Tag, danach nicht mehr. */
+const PHASE_ICONS = { snow:['❄', 'Schneeflocke'], cup:['🏆', 'Pokal'], flag:['🏁', 'Flagge'], bolt:['⚡', 'Blitz'] };
+const phaseStore = store.get('apc.phase.v1', {});
+const savePhase = () => { phaseStore.at = new Date().toISOString(); store.set('apc.phase.v1', phaseStore); };
+const phaseDiff = (a, b) => Math.round((ymdDate(b) - ymdDate(a)) / 864e5);   // Kalendertage von a bis b
+/* Grunddaten der Phase, unabhängig vom heutigen Tag (auch für den Bericht) */
+function phaseBase(){
+  const p = phaseStore; if (!p || !p.on) return null;
+  const camp = p.campId ? camps.find(c => c.id === p.campId) : null;
+  const date = camp ? camp.from : p.date, name = (p.name || (camp && camp.name) || '').trim() || 'Vorbereitung';
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  let start = /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start : date; if (start > date) start = date;
+  const icon = PHASE_ICONS[p.icon] ? p.icon : 'snow';
+  return { name, date, start, camp, icon, sym:PHASE_ICONS[icon][0], motto:p.motto || '', visible:p.visible !== false };
+}
+/* Stand heute: null vor dem Start und nach dem Ziel-Tag */
+function phaseInfo(){
+  const b = phaseBase(); if (!b) return null;
+  const t = ymd(new Date()); if (t < b.start || t > b.date) return null;
+  const total = Math.max(1, phaseDiff(b.start, b.date)), left = phaseDiff(t, b.date), dayN = Math.min(total, phaseDiff(b.start, t) + 1);
+  return Object.assign(b, { left, total, dayN, frac:Math.min(1, phaseDiff(b.start, t) / total) });
+}
+const phaseShown = () => { const p = phaseInfo(); return p && p.visible ? p : null; };
+/* Markierung im Wochenplan: bis und mit Ziel-Tag; im Mission Center nur, wenn für den Spieler sichtbar */
+const phaseMarks = player => { const b = phaseBase(); return b && ymd(new Date()) <= b.date && (!player || b.visible) ? b : null; };
+const phaseChip = (dt, p) => p && dt && ymd(dt) === p.date && !p.camp ? `<span class="pc phase ph-${p.icon}">${p.sym} ${rpEsc(p.name)}</span>` : '';
+const inPhase = (dt, p) => { if (!p || !dt) return ''; const k = ymd(dt); return k === p.date ? ` ph ph-goal ph-${p.icon}` : k >= p.start && k < p.date ? ` ph ph-${p.icon}` : ''; };
+const phaseCD = p => p.left === 0 ? `Heute: ${rpEsc(p.name)} – viel Erfolg!` : p.left === 1 ? `Morgen ist ${rpEsc(p.name)}!` : `Noch ${p.left} Tage bis ${rpEsc(p.name)}`;
+function phaseBannerHTML(){
+  const p = phaseShown(); if (!p) return '';
+  const c = p.camp, det = [c ? `${CAMP_KIND[c.kind]}: ${campDate(c)}` : fmtDM(ymdDate(p.date), true), c && c.place ? rpEsc(c.place) : '', c && c.team ? 'Team ' + rpEsc(c.team) : ''].filter(Boolean).join(' · ');
+  return `<details class="ph-ban ph-${p.icon}${p.left === 0 ? ' ph-now' : ''}"><summary>
+      <span class="ph-ico" aria-hidden="true">${p.sym}</span>
+      <span class="ph-txt"><small>${p.left === 0 ? 'Es ist so weit' : 'In Vorbereitung'}</small><b>${phaseCD(p)}</b>
+        ${p.left > 0 ? `<span class="ph-bar" role="img" aria-label="Tag ${p.dayN} von ${p.total} der Vorbereitung"><i style="width:${Math.max(3, Math.round(p.frac * 100))}%"></i></span><span class="ph-sub">Tag ${p.dayN} von ${p.total} der Vorbereitung</span>` : ''}</span>
+      ${p.left > 0 ? `<span class="ph-cd"><b>${p.left}</b><small>${p.left === 1 ? 'Tag' : 'Tage'}</small></span>` : ''}</summary>
+    <div class="ph-det"><b>${rpEsc(p.name)}</b><span>${det}</span>${p.motto ? `<span class="ph-motto">«${rpEsc(p.motto)}»</span>` : ''}</div></details>`;
+}
+const phaseCardBadge = () => { const p = phaseShown(); return p ? `<p class="pc-phase ph-${p.icon}"><span aria-hidden="true">${p.sym}</span> ${p.left === 0 ? 'Heute' : 'In Vorbereitung'}: <b>${rpEsc(p.name)}</b>${p.left > 0 ? ` · noch ${p.left} ${p.left === 1 ? 'Tag' : 'Tage'}` : ''}</p>` : ''; };
+/* Bericht: eine Zeile im Kurzfazit, wenn die Phase in den Zeitraum fällt */
+function phaseReportLine(D){
+  const b = phaseBase(); if (!b) return '';
+  const F = rpISO(D.from), T = rpISO(D.to); if (b.date < F || b.start > T) return '';
+  const a = b.start > F ? b.start : F, z = b.date < T ? b.date : T;
+  const n = D.log.filter(e => { const d = ymd(new Date(e.at)); return d >= a && d <= z; }).length;
+  const h = hoursSum(hoursItems(a, z)).all;
+  return `Vorbereitungsphase «${b.name}» (${fmtDM(ymdDate(b.start), true)} – ${fmtDM(ymdDate(b.date), true)}): ${n} APC-Training${n === 1 ? '' : 's'}${h ? ` und ${fmtHM(h)} Training insgesamt` : ''} im Zeitraum.`;
+}
+/* Eltern-Bereich: Karte «Vorbereitungsphase» */
+let phaseEdit = null;
+const phaseCands = () => { const t = ymd(new Date()); return camps.filter(c => c.from && c.from >= t).sort((a, b) => a.from < b.from ? -1 : 1); };
+function phaseDraft(){
+  const p = phaseStore, C = phaseCands(), b = phaseBase();
+  if (b && b.date >= ymd(new Date())) return { campId:p.campId || '', name:p.campId ? '' : p.name || '', date:p.date || '', start:b.start, icon:b.icon, motto:p.motto || '', visible:p.visible !== false };
+  const def = C.find(c => /winter\s*challenge/i.test(c.name)) || C.find(isTour) || C[0];
+  return { campId:def ? def.id : '', name:'', date:'', start:ymd(new Date()), icon:'snow', motto:'', visible:true };
+}
+function phaseParentsHTML(){
+  const b = phaseBase(), t = ymd(new Date()), p = phaseInfo();
+  let body;
+  if (phaseEdit){
+    const f = phaseEdit, C = phaseCands();
+    if (f.campId && !C.some(c => c.id === f.campId)){ const c = camps.find(x => x.id === f.campId); if (c) C.unshift(c); }
+    body = `<div class="ph-form">
+      <div class="cp-f"><label for="ph-camp" class="pe-lbl">Ziel der Vorbereitung</label><select id="ph-camp" class="pselect">
+        ${C.map(c => `<option value="${c.id}" ${f.campId === c.id ? 'selected' : ''}>${isTour(c) ? '🏆 ' : ''}${rpEsc(c.name)} · ${fmtDM(ymdDate(c.from), true)}</option>`).join('')}
+        <option value="" ${f.campId ? '' : 'selected'}>Eigener Anlass (ohne Eintrag)</option></select></div>
+      ${f.campId ? '<p class="muted" style="margin:0">Der Countdown läuft bis zum ersten Tag des Eintrags und folgt dessen Datum, wenn es geändert wird.</p>'
+        : `<div class="cp-two"><div class="cp-f"><label for="ph-name" class="pe-lbl">Name</label><input id="ph-name" class="pselect" maxlength="50" value="${rpEsc(f.name)}" placeholder="z. B. Winter Challenge"></div>
+          <div class="cp-f"><label for="ph-date" class="pe-lbl">Datum</label><input type="date" id="ph-date" class="pselect" value="${f.date}"></div></div>`}
+      <div class="cp-f"><label for="ph-start" class="pe-lbl">Start der Vorbereitung</label><input type="date" id="ph-start" class="pselect" value="${f.start}"></div>
+      <div class="cp-f"><span class="pe-lbl">Symbol</span><div class="pl-tabs" role="group" aria-label="Symbol">${Object.entries(PHASE_ICONS).map(([k, [s, l]]) => `<button type="button" class="av-chip" data-ph-icon="${k}" aria-pressed="${f.icon === k}">${s} ${l}</button>`).join('')}</div></div>
+      <div class="cp-f"><label for="ph-motto" class="pe-lbl">Motto (optional)</label><input id="ph-motto" class="pselect" maxlength="80" value="${rpEsc(f.motto)}" placeholder="z. B. Explosiv auf den ersten Metern"></div>
+      <label class="pe-tog"><input type="checkbox" id="ph-vis" ${f.visible ? 'checked' : ''}> Für den Spieler sichtbar (Mission Center, Wochenplan, Spielerkarte)</label>
+      <p class="pnote" id="ph-msg" aria-live="polite" style="margin:0"></p>
+      <div class="bk-row"><button class="btn btn-primary btn-small" id="ph-save">Speichern</button><button class="btn btn-ghost btn-small" id="ph-cancel">Abbrechen</button></div></div>`;
+  } else if (b && t <= b.date){
+    const st = p ? `${p.left === 0 ? 'Heute ist der Tag.' : `Noch ${p.left} ${p.left === 1 ? 'Tag' : 'Tage'} · Tag ${p.dayN} von ${p.total} der Vorbereitung.`}` : `Startet am ${fmtDM(ymdDate(b.start), true)}.`;
+    body = `<p><b>${b.sym} ${rpEsc(b.name)}</b> · ${fmtDM(ymdDate(b.date), true)}${b.camp ? '' : ' (eigener Anlass)'}<br>${st}${b.visible ? '' : ' Für den Spieler ausgeblendet.'}${b.motto ? `<br>Motto: «${rpEsc(b.motto)}»` : ''}</p>
+      <div class="bk-row"><button class="btn btn-primary btn-small" id="ph-edit">Ändern</button><button class="btn btn-ghost btn-small" id="ph-end">Phase beenden</button></div>`;
+  } else {
+    body = `<p>${b ? `«${rpEsc(b.name)}» ist vorbei. ` : ''}Markiert eine Vorbereitung auf ein Turnier oder Camp: Countdown im Mission Center, farbige Tage im Wochenplan und ein Abzeichen auf der Spielerkarte. Der Countdown läuft bis zum Tag des Anlasses und verschwindet danach.</p>
+      <div class="bk-row"><button class="btn btn-primary btn-small" id="ph-edit">${b ? 'Neue Vorbereitung' : 'Vorbereitung einrichten'}</button></div>`;
+  }
+  return `<div class="parents"><div class="pbox backup" id="box-phase"><p class="eyebrow">Vorbereitungsphase</p>${body}</div></div>`;
+}
+function bindPhase(redraw){
+  const e = $('ph-edit'); if (e) e.onclick = () => { phaseEdit = phaseDraft(); redraw(); };
+  const x = $('ph-end'); if (x) x.onclick = () => { if (!confirm('Vorbereitungsphase beenden? Countdown und Markierungen verschwinden.')) return; phaseStore.on = false; savePhase(); redraw(); };
+  if (!phaseEdit) return;
+  const f = phaseEdit, read = () => { const v = id => $(id) ? $(id).value : undefined;
+    f.campId = v('ph-camp') || ''; if ($('ph-name')) f.name = v('ph-name').trim(); if ($('ph-date')) f.date = v('ph-date'); f.start = v('ph-start') || ''; f.motto = v('ph-motto').trim(); f.visible = $('ph-vis').checked; };
+  $('ph-camp').onchange = () => { read(); redraw(); };
+  document.querySelectorAll('[data-ph-icon]').forEach(b => b.onclick = () => { read(); f.icon = b.dataset.phIcon; redraw(); });
+  $('ph-cancel').onclick = () => { phaseEdit = null; redraw(); };
+  $('ph-save').onclick = () => {
+    read(); const msg = t => { $('ph-msg').textContent = t; };
+    const camp = f.campId ? camps.find(c => c.id === f.campId) : null, date = camp ? camp.from : f.date;
+    if (!camp && !f.name) return msg('Bitte einen Namen eingeben.');
+    if (!date) return msg('Bitte ein Datum wählen.');
+    if (date < ymd(new Date())) return msg('Das Datum liegt in der Vergangenheit.');
+    const start = f.start || ymd(new Date());
+    if (start > date) return msg('Der Start der Vorbereitung muss vor dem Anlass liegen.');
+    Object.assign(phaseStore, { on:true, campId:camp ? camp.id : '', name:camp ? '' : f.name, date:camp ? '' : date, start, icon:f.icon, motto:f.motto, visible:f.visible });
+    savePhase(); phaseEdit = null; redraw();
+  };
+}
 /* Kommentare (APC 1.95): freiwillige Bemerkung zu einem Eintrag, unabhängig vom Status (auch bei offenen Trainings).
    apc.komm.v1 { schlüssel: { t:Text, at:ISO } }. Gelöscht = t leer (so übernimmt der Cloud-Abgleich auch das Löschen).
    Schlüssel: 'club|JJJJ-MM-TT|on' (on, off, game), 'zt|<id>' (Zusatztraining), 'camp|<id>' (Camp, Spezialtraining).
@@ -4585,12 +4727,13 @@ const markPlanSeen = mon => { const nx = addDays(monOf(new Date()), 7); if (mon 
 const planNextDue = () => (new Date().getDay() + 6) % 7 >= 4 && store.get('apc.planseen.v1', '') !== ymd(addDays(monOf(new Date()), 7));
 function plannerHTML(){
   const mon = plMon(), tpl = !mon, W = tpl ? week : weekObj(mon), warn = weekWarnings(W), t0 = addDays(new Date(), 0).getTime();
+  const ph = tpl ? null : phaseMarks(false);
   const thisMon = monOf(new Date()).getTime(), sel = tpl ? 'tpl' : mon.getTime() === thisMon ? 'now' : mon.getTime() === thisMon + 7 * 864e5 || mon.getTime() === addDays(new Date(thisMon), 7).getTime() ? 'next' : '';
   const cells = DAYS.map(([k, name, short], i) => {
     const dt = tpl ? null : addDays(mon, i), isToday = !!dt && dt.getTime() === t0;
     const d = tpl ? week[k] : Object.assign({}, W[k], { custom:isCustom(W[k]) });
-    return `<button class="pday${isToday ? ' today' : ''}${dt && dt.getTime() < t0 ? ' past' : ''}${plannerOpen === k ? ' open' : ''}" data-day="${k}" aria-pressed="${plannerOpen === k}">
-      <span class="pd-name"><b>${short}</b><small>${tpl ? name : isToday ? 'Heute' : fmtDM(dt, true)}</small></span><span class="pd-chips">${planChipsHTML(d, dt ? clubLog()[ymd(dt)] : null, dt)}</span></button>`;
+    return `<button class="pday${isToday ? ' today' : ''}${dt && dt.getTime() < t0 ? ' past' : ''}${plannerOpen === k ? ' open' : ''}${inPhase(dt, ph)}" data-day="${k}" aria-pressed="${plannerOpen === k}">
+      <span class="pd-name"><b>${short}</b><small>${tpl ? name : isToday ? 'Heute' : fmtDM(dt, true)}</small></span><span class="pd-chips">${phaseChip(dt, ph)}${planChipsHTML(d, dt ? clubLog()[ymd(dt)] : null, dt)}</span></button>`;
   }).join('');
   let editor = '';
   if (plannerOpen){
@@ -4637,10 +4780,10 @@ function plannerHTML(){
 /* Wochenplan nur zur Ansicht (Mission Center); bearbeitet wird er im Eltern-Bereich */
 let mcWeekNext = false;
 function weekViewHTML(){
-  const t0 = addDays(new Date(), 0).getTime(), mon = addDays(monOf(new Date()), mcWeekNext ? 7 : 0);
+  const t0 = addDays(new Date(), 0).getTime(), mon = addDays(monOf(new Date()), mcWeekNext ? 7 : 0), ph = phaseMarks(true);
   const cells = DAYS.map(([k, name, short], i) => {
-    const dt = addDays(mon, i), isToday = dt.getTime() === t0, chips = planChipsHTML(planFor(dt), clubLog()[ymd(dt)], dt);   // Club-Termine mit Status nur zur Ansicht (✓ ✗ –), bestätigt wird im Eltern-Bereich
-    return `<div class="pday ro${isToday ? ' today' : ''}"><span class="pd-name"><b>${short}</b><small>${isToday ? 'Heute' : fmtDM(dt)}</small></span><span class="pd-chips">${chips}</span></div>`;
+    const dt = addDays(mon, i), isToday = dt.getTime() === t0, chips = phaseChip(dt, ph) + planChipsHTML(planFor(dt), clubLog()[ymd(dt)], dt);   // Club-Termine mit Status nur zur Ansicht (✓ ✗ –), bestätigt wird im Eltern-Bereich
+    return `<div class="pday ro${isToday ? ' today' : ''}${inPhase(dt, ph)}"><span class="pd-name"><b>${short}</b><small>${isToday ? 'Heute' : fmtDM(dt)}</small></span><span class="pd-chips">${chips}</span></div>`;
   }).join('');
   return `<section class="planner mc2-week" aria-labelledby="wk-h"><div class="cab-head"><h3 id="wk-h">${mcWeekNext ? 'Nächste Woche' : 'Wochenplan'}</h3>
     <div class="pl-tabs">${[[false, 'Diese Woche'], [true, 'Nächste Woche']].map(([v, l]) => `<button class="av-chip" data-mcw="${v ? 1 : 0}" aria-pressed="${mcWeekNext === v}">${l}</button>`).join('')}</div></div>
@@ -5231,6 +5374,7 @@ function renderCenter(){
   const C = 2 * Math.PI * 40, frac = Math.min(1, wc / tgt);
   $('screen-center').innerHTML = `
   <div class="inner">
+    ${phaseBannerHTML()}
     <div class="mc2">
       <section class="mc2-main">${mainHTML}</section>
       <aside class="mc2-side">
@@ -5727,6 +5871,7 @@ function renderParents(){
       <p id="img-msg" aria-live="polite"></p>
     </div></div>
     ${painParentsHTML()}
+    ${phaseParentsHTML()}
     <div class="parents"><div class="pbox backup" id="box-camps">
       <p class="eyebrow">${CAMP_TITLE}</p>
       <p>${campTeaser()}</p>
@@ -5758,6 +5903,7 @@ function renderParents(){
   if (window.APCSync) window.APCSync.mount($('sync-box')); else { const sb = $('sync-box'); if (sb) sb.parentNode.remove(); }
   bindPlanner();
   bindFerien(() => { const sc = $('screen-parents'), y = sc.scrollTop; renderParents(); sc.scrollTop = y; });
+  bindPhase(() => { const sc = $('screen-parents'), y = sc.scrollTop; renderParents(); sc.scrollTop = y; });
   { const b = $('btn-plan-next'); if (b) b.onclick = () => { plannerMon = addDays(monOf(new Date()), 7); plannerOpen = null; markPlanSeen(plannerMon); renderParents();
       const p = document.querySelector('#screen-parents .planner'); if (p) p.scrollIntoView({ block:'start', behavior:'smooth' }); }; }
   $('test-weeks').onchange = e => { settings.testWeeks = +e.target.value; saveSettings(); const y = $('screen-parents').scrollTop; renderParents(); $('screen-parents').scrollTop = y; };
@@ -6086,7 +6232,8 @@ function clubFazit(D){
   if (open) warn.push(`${open} Club-Termin${open > 1 ? 'e sind' : ' ist'} noch nicht bestätigt (Eltern-Bereich).`);
   return { out, warn };
 }
-function reportFazit(D){
+function reportFazit(D){ const r = reportFazit0(D), ph = phaseReportLine(D); if (ph) r.out.push(ph); return r; }
+function reportFazit0(D){
   const out = [], warn = [], perWeek = D.log.length / Math.max(1, D.len / (7 * 864e5)), name = PROFILE.name || 'Dein Kind', cf = clubFazit(D);
   if (!D.log.length) return { out:[`Im gewählten Zeitraum wurden keine APC-Trainings gemacht.`].concat(cf.out), warn:(D.pains.length ? [`${D.pains.length} Schmerzmeldung${D.pains.length > 1 ? 'en' : ''} im Zeitraum.`] : []).concat(cf.warn) };
   out.push(`${name} hat ${D.log.length} APC-Training${D.log.length > 1 ? 's' : ''} absolviert (${D.mins} Minuten, im Schnitt ${perWeek.toFixed(1).replace('.', ',')} pro Woche).`);
@@ -8094,6 +8241,7 @@ function openCard(){
         <div class="pc-attrs">${ATTRS.map(([k, n]) => `<div class="pa"><b>${A[k]}</b><span>${k}</span><div class="pa-bar"><i style="width:${A[k]}%"></i></div><small>${n}</small></div>`).join('')}</div>
       </article>
       <div class="pc-side">
+        ${phaseCardBadge()}
         <div class="pc-pick"><p class="pe-lbl">Bild wählen</p>
           <div class="pc-thumbs" role="group" aria-label="Bild für die Spielerkarte">
             <button class="pc-thumb fig" data-img="" aria-pressed="${!CardImgs.sel()}" aria-label="Eigener Avatar">${avatarSVG(avatar, player.no)}</button>
