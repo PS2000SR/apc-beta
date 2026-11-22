@@ -117,8 +117,19 @@
   // Hochladen (APC 2.4): zuerst den aktuellen Cloud-Stand der geänderten Blöcke holen und mit dem Gerät
   // zusammenführen – so überschreibt ein Gerät nie mehr unbemerkt, was das andere inzwischen gespeichert hat.
   // Hochladen läuft immer nacheinander (nie zwei gleichzeitig).
-  var pushing = Promise.resolve();
-  function push(opt){ var p = pushing.then(function(){ return pushNow(opt); }); pushing = p.catch(function(){}); return p; }
+  // APC 2.42: Holen und Hochladen laufen strikt nacheinander in einer gemeinsamen Warteschlange. Liefen sie
+  // gleichzeitig, konnte ein Gerät seinen eigenen, gerade hochgeladenen Stand als Änderung des anderen Geräts
+  // ansehen und Zähler wie XP doppelt zählen.
+  var queue = Promise.resolve();
+  function serial(fn){ var p = queue.then(fn); queue = p.catch(function(){}); return p; }
+  function push(opt){ return serial(function(){ return pushNow(opt); }); }
+  function pull(){ return serial(pullNow); }
+  // Zuletzt von diesem Gerät hochgeladener Stand pro Block («apc.sync.s.<Block>»). Findet das Gerät genau diesen
+  // Stand in der Cloud, stammt er von ihm selbst (z. B. Antwort unterwegs verloren) und gilt als gemeinsamer Stand.
+  var SENT = 'apc.sync.s.';
+  var getSent = function(k){ try { return rawGet.call(LS, SENT + k); } catch(e){ return null; } };
+  var setSent = function(k, v){ try { if (v === null) rawRem.call(LS, SENT + k); else rawSet.call(LS, SENT + k, v); } catch(e){} };
+  function baseFor(k, cloudVal){ var bt = getBase(k); if (cloudVal !== undefined && cloudVal !== null && cloudVal === getSent(k)) bt = cloudVal; return bt; }
   function pushNow(opt){
     if (!linked()) return Promise.resolve(0);
     var D = meta.dirty, keys = Object.keys(D).filter(syncable); if (!keys.length) return Promise.resolve(0);
@@ -128,29 +139,37 @@
     var ka = !!(opt && opt.keepalive), local = {};
     upKeys.forEach(function(k){ local[k] = rawGet.call(LS, k); });
     var inList = upKeys.map(function(k){ return '"' + k.replace(/"/g, '') + '"'; }).join(',');
-    var fetchCloud = upKeys.length ? api('/rest/v1/kv?select=key,value&key=in.(' + encodeURIComponent(inList) + ')', { keepalive:ka }) : Promise.resolve([]);
+    var fetchCloud = upKeys.length ? api('/rest/v1/kv?select=key,value,updated_at&key=in.(' + encodeURIComponent(inList) + ')', { keepalive:ka }) : Promise.resolve([]);
     return fetchCloud.then(function(rows){
-      var cloud = {}; (rows || []).forEach(function(r){ cloud[r.key] = r.value; });
+      var cloud = {}, stamp = {}; (rows || []).forEach(function(r){ cloud[r.key] = r.value; stamp[r.key] = r.updated_at; });
       var send = {};
       upKeys.forEach(function(k){
-        var c = cloud[k], l = local[k], bt = getBase(k);
+        var c = cloud[k], l = local[k], bt = baseFor(k, c);
         send[k] = (c === undefined || c === l || c === bt) ? l : (mergeText(k, l, c, bt) || l);
       });
       // Nur hochladen, was sich von der Cloud unterscheidet. Ein Gerät, das einen Block unverändert neu speichert,
       // kann so nie gleichzeitig Neues vom anderen Gerät überschreiben.
       var post = upKeys.filter(function(k){ return send[k] !== cloud[k]; }), jobs = [];
-      if (post.length) jobs.push(api('/rest/v1/kv?on_conflict=user_id,key', { method:'POST', keepalive:ka, headers:{ Prefer:'resolution=merge-duplicates,return=minimal' },
-        body:post.map(function(k){ return { key:k, value:send[k], device:meta.device }; }) }));
+      post.forEach(function(k){ setSent(k, send[k]); });
+      // APC 2.42: bedingtes Speichern. Ein Block wird nur geschrieben, wenn er in der Cloud seit dem Lesen
+      // unverändert ist (gleicher Zeitstempel updated_at); ein neuer Block nur, wenn ihn nicht gerade das andere
+      // Gerät angelegt hat. Sonst wurde nichts geschrieben: Der Block bleibt markiert, und der nächste Durchgang
+      // führt mit dem neuen Cloud-Stand zusammen. So kann kein Gerät das andere überschreiben – auch nicht im
+      // selben Moment. Braucht kein zusätzliches SQL (Tabelle kv mit Zeitstempel und Änderungs-Regel genügen).
+      var lost = {}, CF = meta.conflict || (meta.conflict = {});
+      post.forEach(function(k){
+        var body = { value:send[k], device:meta.device }, req;
+        // Rückfall: Scheitert das bedingte Speichern mit genau demselben Zeitstempel erneut, obwohl sich die Cloud
+        // nicht verändert hat, greift die Bedingung nicht (z. B. Zeitformat) – dann normal speichern wie in 2.4.
+        if (stamp[k] && CF[k] === stamp[k]){ body.key = k; meta.condFallback = (meta.condFallback || 0) + 1;
+          req = api('/rest/v1/kv?on_conflict=user_id,key', { method:'POST', keepalive:ka, headers:{ Prefer:'resolution=merge-duplicates,return=minimal' }, body:[body] }).then(function(){ return [1]; }); }
+        else if (stamp[k]) req = api('/rest/v1/kv?key=eq.' + encodeURIComponent(k) + '&updated_at=eq.' + encodeURIComponent(stamp[k]),
+          { method:'PATCH', keepalive:ka, headers:{ Prefer:'return=representation' }, body:body });
+        else { body.key = k; req = api('/rest/v1/kv?on_conflict=user_id,key', { method:'POST', keepalive:ka, headers:{ Prefer:'resolution=ignore-duplicates,return=representation' }, body:[body] }); }
+        jobs.push(req.then(function(r){ if (!r || !r.length){ lost[k] = 1; CF[k] = stamp[k] || ''; } else delete CF[k]; }));
+      });
       dels.forEach(function(k){ jobs.push(api('/rest/v1/kv?key=eq.' + encodeURIComponent(k), { method:'DELETE', keepalive:ka, headers:{ Prefer:'return=minimal' } })); });
       return Promise.all(jobs).then(function(){
-        // Kontrolle: Hat die Cloud jetzt wirklich unseren Stand? Hat das andere Gerät im selben Moment gespeichert,
-        // wird der Block erneut markiert; der nächste Durchgang führt beide Stände zusammen (Basis = Stand davor).
-        if (!post.length) return null;
-        var pl = post.map(function(k){ return '"' + k.replace(/"/g, '') + '"'; }).join(',');
-        return api('/rest/v1/kv?select=key,value&key=in.(' + encodeURIComponent(pl) + ')', { keepalive:ka }).catch(function(){ return null; });
-      }).then(function(after){
-        var lost = {};
-        (after || []).forEach(function(r){ if (r.value !== send[r.key]) lost[r.key] = 1; });
         upKeys.forEach(function(k){
           var now = rawGet.call(LS, k), v = send[k];
           if (v !== local[k]){   // der hochgeladene Stand enthält Neues vom anderen Gerät: auch aufs Gerät
@@ -165,11 +184,13 @@
         keys.forEach(function(k){ if (meta.dirty[k] && meta.dirty[k].t === snap[k]) delete meta.dirty[k]; });
         Object.keys(lost).forEach(function(k){ meta.dirty[k] = { t:Date.now(), del:false }; });
         if (Object.keys(lost).length){ clearTimeout(pushTimer); pushTimer = setTimeout(function(){ push().catch(function(){}); }, 400 + Math.random() * 1200); }
-        meta.lastPush = new Date().toISOString(); meta.err = ''; saveMeta(); paint(); return keys.length;
+        meta.lastPush = new Date().toISOString(); meta.err = ''; saveMeta(); paint();
+        if (needReload && !busy) setTimeout(maybeReload, 0);   // Neues vom anderen Gerät gleich anzeigen (nur auf ruhigen Seiten)
+        return keys.length;
       });
     }).catch(function(e){ meta.err = e.message; saveMeta(); paint(); throw e; });
   }
-  function pull(){
+  function pullNow(){
     if (!linked()) return Promise.resolve(0);
     // Erster Abgleich nach dem Update auf 2.4: einmal alle Blöcke holen, um die Basis anzulegen. Dabei wird nichts
     // vom Gerät überschrieben – weicht ein Block ab, wird zusammengeführt und hochgeladen.
@@ -185,7 +206,7 @@
         if (init && cur !== null && !meta.dirty[r.key]) meta.dirty[r.key] = { t:Date.now(), del:false };   // abweichend: wie eine lokale Änderung behandeln
         if (meta.dirty[r.key]){
           // Gerät hat ungespeicherte Änderungen: zusammenführen, die Basis bleibt bis zum Neuladen
-          var m = cur === null ? null : mergeText(r.key, cur, r.value, getBase(r.key));
+          var m = cur === null ? null : mergeText(r.key, cur, r.value, baseFor(r.key, r.value));
           if (m !== null && m !== cur){ rawSet.call(LS, r.key, m); changed++; }
           setBase(r.key, r.value);   // die Cloud-Fassung ist jetzt gemeinsamer Stand; das Gerät hat zusätzlich seine Änderungen
           return;
@@ -218,17 +239,22 @@
       .then(function(){ meta.imgClean = 1; saveMeta(); }, function(){});   // offline: beim nächsten Abgleich wieder versuchen
   }
   var needReload = false, busy = false;
-  function cycle(){
-    if (!enabled || !logged() || busy) return Promise.resolve();
+  var running = null;
+  function cycle(opt){
+    if (!enabled || !logged()) return Promise.resolve();
+    if (busy) return running || Promise.resolve();
     busy = true;
+    var force = !!(opt && opt.pull);
     // Zuerst den Freigabe-Status prüfen (offline gilt der zuletzt bekannte Status)
-    return checkStatus().catch(function(){}).then(function(){
+    running = checkStatus().then(function(){ if (meta.err === NETERR){ meta.err = ''; saveMeta(); } }, function(){}).then(function(){   // Status erreichbar = wieder online
       if (!active()) return;
       if (meta.linked !== true) return meta.choice ? null : firstLink();
       // Auf Seiten mit laufender Mission oder offenen Formularen nur hochladen, nicht holen
-      var safe = window.APC_screen === undefined || SAFE.indexOf(window.APC_screen) >= 0;
+      // Eltern-Bereich (ab 2.42): holen ja, aber nie automatisch neu laden – dort erscheint der Hinweis «Aktualisieren»
+      var safe = force || window.APC_screen === undefined || window.APC_screen === 'parents' || SAFE.indexOf(window.APC_screen) >= 0;
       return cleanCloud().then(function(){ return safe ? pull() : null; }).then(function(){ return push(); });
-    }).catch(function(e){ meta.err = e.message; saveMeta(); }).then(function(){ busy = false; paint(); gate(); maybeReload(); });
+    }).catch(function(e){ meta.err = e.message; saveMeta(); }).then(function(){ busy = false; running = null; paint(); gate(); if (!(opt && opt.noReload)) maybeReload(); });
+    return running;
   }
   // Die App hält ihre Daten im Arbeitsspeicher. Neue Daten vom anderen Gerät werden darum mit einem
   // Neuladen übernommen – aber nur auf ruhigen Seiten, nie mitten in einer Mission oder einem Formular.
@@ -236,7 +262,75 @@
   function maybeReload(){
     if (!needReload) return;
     var s = window.APC_screen;
-    if (s === undefined || SAFE.indexOf(s) >= 0){ needReload = false; location.reload(); }
+    if (s === undefined || SAFE.indexOf(s) >= 0){ if (reloadTo(s)) needReload = false; }
+    else if (s === 'parents'){ fresh = true; banner(); }
+  }
+  // APC 2.42: Nach dem Neuladen (neue Daten vom anderen Gerät) öffnet die App wieder dieselbe Seite, ohne Intro
+  function reloadTo(s, manual){
+    // Schutz vor einer Neulade-Schleife: automatisch höchstens 2× innerhalb von 30 s
+    try { var L = JSON.parse(sessionStorage.getItem('apcReloads') || '[]').filter(function(t){ return Date.now() - t < 30000; });
+      if (!manual && L.length >= 2){   // später nochmals versuchen (needReload bleibt gesetzt)
+        fresh = true; banner(); clearTimeout(retryT); retryT = setTimeout(maybeReload, 30000 - (Date.now() - L[0]) + 200); return false; }
+      L.push(Date.now()); sessionStorage.setItem('apcReloads', JSON.stringify(L)); if (s) sessionStorage.setItem('apcReopen', s); } catch(e){}
+    location.reload(); return true;
+  }
+  var retryT = null;
+
+  // ---- APC 2.42: Abgleich beim Seitenwechsel ----
+  // Eltern-Bereich: beim Öffnen sofort abgleichen, damit Daten vom anderen iPad da sind, bevor man etwas
+  // bearbeitet. Kommen neue Daten an und wurde noch nichts angetippt, lädt die App gleich wieder den
+  // Eltern-Bereich; sonst erscheint oben ein Hinweis mit «Aktualisieren».
+  // Ruhige Seiten: sofort abgleichen statt erst beim nächsten Minutentakt (höchstens alle 10 s).
+  var lastScreenSync = 0, fresh = false;
+  function screen(name){
+    if (!enabled || !logged() || !linked() || !active()) { badge(); return; }
+    if (name === 'parents'){
+      var t0 = Date.now(), touched = false;
+      var mark = function(){ touched = true; };
+      document.addEventListener('pointerdown', mark, true); document.addEventListener('keydown', mark, true);
+      var p = busy ? (running || Promise.resolve()).then(function(){ return cycle({ pull:true, noReload:true }); }) : cycle({ pull:true, noReload:true });
+      p.then(function(){
+        document.removeEventListener('pointerdown', mark, true); document.removeEventListener('keydown', mark, true);
+        if (!needReload) return;
+        if (window.APC_screen !== 'parents'){ maybeReload(); return; }
+        if (!touched && Date.now() - t0 < 8000 && reloadTo('parents')){ needReload = false; return; }
+        fresh = true; banner();
+      });
+      lastScreenSync = Date.now();
+    } else if (SAFE.indexOf(name) >= 0){
+      if (needReload) { maybeReload(); return; }
+      if (Date.now() - lastScreenSync > 10000){ lastScreenSync = Date.now(); cycle(); }
+    }
+    banner();
+  }
+
+  // ---- APC 2.42: Offline-Hinweis ----
+  // Unten über der Navigation: «Offline» (mit Anzahl wartender Änderungen). Im Eltern-Bereich oben ein Hinweis,
+  // dass Daten vom anderen iPad möglicherweise nicht aktuell sind.
+  var NETERR = 'Keine Verbindung zum Internet.';
+  function offline(){ return linked() && (navigator.onLine === false || meta.err === NETERR); }
+  function badge(){
+    if (!document.body) return;
+    var el = document.getElementById('sy-off');
+    if (!el){ el = document.createElement('span'); el.id = 'sy-off'; el.className = 'sy-off'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    var n = Object.keys(meta.dirty).length, on = enabled && logged() && offline();
+    el.hidden = !on;
+    el.textContent = on ? 'Offline' + (n ? ' · ' + n + (n > 1 ? ' Änderungen warten' : ' Änderung wartet') : '') : '';
+    banner();
+  }
+  function banner(){
+    var sc = document.getElementById('screen-parents'); if (!sc) return;
+    var el = document.getElementById('sy-banner');
+    var off = enabled && logged() && offline(), show = window.APC_screen === 'parents' && (off || fresh);
+    if (!show){ if (el) el.remove(); if (window.APC_screen !== 'parents') fresh = false; return; }
+    var host = sc.querySelector('.inner') || sc;
+    if (!el || el.parentNode !== host){ if (el) el.remove(); el = document.createElement('div'); el.id = 'sy-banner'; el.className = 'sy-banner'; el.setAttribute('role', 'status');
+      var head = host.querySelector('.tr-head'); if (head && head.nextSibling) host.insertBefore(el, head.nextSibling); else host.insertBefore(el, host.firstChild); }
+    if (off){ el.className = 'sy-banner off';
+      el.innerHTML = '<span><b>Offline</b> – Daten vom anderen iPad sind möglicherweise nicht aktuell. Deine Änderungen werden hochgeladen, sobald wieder Internet da ist.</span>'; }
+    else { el.className = 'sy-banner new';
+      el.innerHTML = '<span><b>Neue Daten vom anderen iPad</b> sind da.</span> <button class="btn btn-primary btn-small" id="sy-fresh">Aktualisieren</button>';
+      el.querySelector('#sy-fresh').onclick = function(){ reloadTo('parents', true); }; }
   }
 
   // ---- APC 2.4: Zusammenführen (Drei-Wege-Vergleich mit der Basis) ----
@@ -343,6 +437,7 @@
   var esc = function(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, function(c){ return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]; }); };
   var when = function(iso){ if (!iso) return '–'; try { return new Date(iso).toLocaleString('de-CH', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }); } catch(e){ return iso; } };
   function paint(){
+    badge();
     if (!box || !document.body.contains(box)) return;
     var h = '<p class="eyebrow">Cloud-Abgleich</p>';
     if (!enabled){
@@ -459,6 +554,11 @@
     '.pbox .sync-form label{display:flex;flex-direction:column;align-items:stretch;gap:4px;color:var(--muted);font-size:.9rem;cursor:default}' +
     '.pbox .sync-form input{width:100%;height:auto;min-height:46px;box-sizing:border-box;border-radius:10px;border:1.5px solid var(--line);background:var(--panel-2);color:var(--text);font:inherit;font-size:16px;padding:8px 12px;accent-color:auto}' +
     '.pbox .sync-err{color:var(--red)}' +
+    '.sy-off{position:fixed;z-index:55;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 72px);pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.35);background:rgba(40,28,6,.92)!important;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;border:1px solid rgba(245,158,11,.55);background:rgba(245,158,11,.14);color:#FBBF24;font:700 .72rem/1.2 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}' +
+    '.sy-off[hidden]{display:none}.sy-off::before{content:"";width:7px;height:7px;border-radius:50%;background:#F59E0B}' +
+    '.sy-banner{margin:0 0 14px;padding:12px 14px;border-radius:14px;font-size:.95rem;line-height:1.4;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}' +
+    '.sy-banner.off{border:1px solid rgba(245,158,11,.5);background:rgba(245,158,11,.12);color:var(--text)}' +
+    '.sy-banner.new{border:1px solid rgba(127,212,255,.5);background:rgba(127,212,255,.12);color:var(--text)}' +
     '.apc-gate{position:fixed;inset:0;z-index:10000;background:var(--ink,#09111F);display:grid;place-items:center;padding:calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px);overflow:auto}' +
     '.gt-pn{background:var(--panel,#101A2C);color:var(--text,#ECF1F8);border:1.5px solid var(--line,#25334E);border-radius:18px;padding:24px;width:min(440px,100%);display:flex;flex-direction:column;gap:12px;font:16px/1.45 Barlow,system-ui,sans-serif}' +
     '.gt-pn h2{margin:0;font:800 28px/1.1 "Barlow Condensed",system-ui,sans-serif;letter-spacing:.02em}' +
@@ -485,5 +585,9 @@
     // Kommen beide Geräte gleichzeitig wieder ins Netz, nicht im selben Moment abgleichen (kleiner Zufallsversatz)
     window.addEventListener('online', function(){ setTimeout(cycle, 300 + Math.random() * 2500); });
   }
-  window.APCSync = { mount:mount, sync:cycle, status:function(){ return { enabled:enabled, logged:logged(), status:meta.status || '', linked:linked(), dirty:Object.keys(meta.dirty).length, lastSync:meta.lastSync }; }, _cfg:CFG, _merge:mergeText };
+  window.addEventListener('offline', badge);
+  window.addEventListener('online', badge);
+  try { new MutationObserver(function(){ if (window.APC_screen === 'parents' && !document.getElementById('sy-banner')) banner(); })
+    .observe(document.documentElement, { childList:true, subtree:true }); } catch(e){}
+  window.APCSync = { mount:mount, sync:cycle, screen:screen, status:function(){ return { enabled:enabled, logged:logged(), status:meta.status || '', linked:linked(), dirty:Object.keys(meta.dirty).length, lastSync:meta.lastSync }; }, _cfg:CFG, _merge:mergeText };
 })();

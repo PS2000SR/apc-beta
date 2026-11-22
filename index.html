@@ -1393,6 +1393,8 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
 <div id="intro" aria-hidden="true"><div class="i-bg"></div><div class="i-dim"></div><svg viewBox="0 0 1000 100" preserveAspectRatio="none"><path pathLength="1" vector-effect="non-scaling-stroke" d="M0 60 H440 L465 30 L490 85 L515 10 L540 75 L560 60 H1000"/></svg><div class="i-t">Athlete Performance Centre</div></div>
 <script>(function(){
   var el=document.getElementById('intro'),done=false;
+  /* APC 2.42: Neuladen wegen neuer Daten vom anderen iPad – kein Intro, die App öffnet wieder dieselbe Seite */
+  try{if(sessionStorage.getItem('apcReopen')){el.remove();return;}}catch(e){}
   var ruhig=false; /* Intro läuft bewusst auch bei «Bewegung reduzieren» vollständig */
   function aufraeumen(ms){setTimeout(function(){el.remove();},ms);}
   /* Ende: Bild zerspringt in Splitter, die nach aussen fliegen */
@@ -1497,9 +1499,16 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.41';
+const APP_VERSION = '2.42';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.42', date:'22.11.2026',
+    neu:['Beim Öffnen des Eltern-Bereichs gleicht die App sofort ab: Änderungen vom anderen iPad sind da, bevor du etwas bearbeitest. Ist der Eltern-Bereich schon offen, erscheint oben «Neue Daten vom anderen iPad» mit «Aktualisieren».',
+         'Beim Wechsel auf Heute, Trainings oder Fortschritt gleicht die App sofort ab statt erst nach bis zu einer Minute. Nach neuen Daten öffnet sie wieder dieselbe Seite, ohne Intro.',
+         'Offline-Hinweis: Ohne Internet steht unten über der Navigation «Offline» (mit Anzahl wartender Änderungen), im Eltern-Bereich ein Hinweis, dass Daten vom anderen iPad möglicherweise nicht aktuell sind.'],
+    fix:['Änderungen im Eltern-Bereich erschienen auf dem anderen iPad nicht, solange dort der Eltern-Bereich offen war.',
+         'XP und Missionszähler wurden seit 2.4 beim Abgleich teilweise doppelt gezählt. Behoben: Holen und Hochladen laufen nacheinander, und jedes iPad erkennt seinen eigenen Stand in der Cloud.',
+         'Speichern beide iPads im selben Moment, geht jetzt nichts mehr verloren: Die Cloud übernimmt eine Änderung nur, wenn sich der Eintrag seit dem Lesen nicht verändert hat; sonst wird zuerst zusammengeführt.'] },
   { v:'2.41', date:'22.11.2026',
     neu:['Neue Bilder: eigenes Startbild im Intro, neues Hintergrundbild unter «Fortschritt» und neu ein eigenes Hintergrundbild in der Rubrik «Trainings». Das bisherige Startbild mit Teamlogo und Spielername ist entfernt.'],
     fix:[] },
@@ -3798,6 +3807,7 @@ function show(name){
   if (name === 'player') $('voice-hint').hidden = Voice.mode() !== 'off';
   $('screen-' + name).scrollTop = 0;
   if (name === 'center') setTimeout(checkExtraNews, 400);
+  try { if (window.APCSync && APCSync.screen) APCSync.screen(name); } catch(e){}   // APC 2.42: Abgleich beim Seitenwechsel
 }
 /* Zurück zum Mission Center – von jeder Stelle aus */
 function goHome(){
@@ -8457,6 +8467,13 @@ syncExtraXP();
 syncGameXP();
 renderCenter();
 show('center');
+// APC 2.42: nach einem Neuladen wegen neuer Daten vom anderen iPad dieselbe Seite wieder öffnen
+try {
+  const r = sessionStorage.getItem('apcReopen'); sessionStorage.removeItem('apcReopen');
+  const go = { parents:openParents, progress:openProgress, missions:openMissions, analytics:openAnalytics, records:openRecords,
+               trophies:openTrophies, season:openSeason, log:openLog, card:openCard, games:openGames }[r];
+  if (go) go();
+} catch(e){}
 window.APC_ready = true;   // APC 2.32: Start erfolgreich (sonst zeigt rescue.js den Notfall-Bildschirm)
 checkWhatsNew();
 })();
