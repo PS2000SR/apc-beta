@@ -1499,9 +1499,13 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.42';
+const APP_VERSION = '2.43';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.43', date:'22.11.2026',
+    neu:['Die Anzeige «Offline» steht jetzt oben rechts in der Kopfzeile, links neben «Mission Center», etwas grösser. Die Zahl dahinter zeigt, wie viele Änderungen auf das Hochladen warten.',
+         'Antippen von «Offline» zeigt eine Erklärung: was ohne Internet passiert, wie viele Änderungen warten und wann zuletzt abgeglichen wurde.'],
+    fix:[] },
   { v:'2.42', date:'22.11.2026',
     neu:['Beim Öffnen des Eltern-Bereichs gleicht die App sofort ab: Änderungen vom anderen iPad sind da, bevor du etwas bearbeitest. Ist der Eltern-Bereich schon offen, erscheint oben «Neue Daten vom anderen iPad» mit «Aktualisieren».',
          'Beim Wechsel auf Heute, Trainings oder Fortschritt gleicht die App sofort ab statt erst nach bis zu einer Minute. Nach neuen Daten öffnet sie wieder dieselbe Seite, ohne Intro.',

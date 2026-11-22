@@ -56,7 +56,8 @@
       '.beta-pn h2{margin:0;font-size:20px}.beta-pn p{margin:0;color:#B5C2D6}.beta-pn p b{color:#ECF1F8}#beta-msg{color:#FF8A3D}#beta-msg:empty{display:none}' +
       '.beta-pn button{min-height:48px;border-radius:12px;border:0;font:700 15px system-ui,sans-serif;cursor:pointer}' +
       '.beta-pn .b1{background:#FF8A3D;color:#1A0E00}.beta-pn .b2{background:transparent;color:#ECF1F8;box-shadow:inset 0 0 0 1.5px #25334E}' +
-      '.brand b .beta-v{color:#FF8A3D;margin-left:.35em}';
+      '.brand b .beta-v{color:#FF8A3D;margin-left:.35em}' +
+      'html.sy-offl .beta-tag{left:222px;transform:none}';   // APC 2.43: Platz für «Offline» in der Kopfzeile
     document.head.appendChild(st);
     var b = document.createElement('button'); b.className = 'beta-tag'; b.type = 'button'; b.textContent = 'BETA'; b.setAttribute('aria-label', 'Beta-Version: Menü öffnen');
     document.body.appendChild(b);

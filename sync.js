@@ -305,19 +305,73 @@
   }
 
   // ---- APC 2.42: Offline-Hinweis ----
-  // Unten über der Navigation: «Offline» (mit Anzahl wartender Änderungen). Im Eltern-Bereich oben ein Hinweis,
+  // Kopfzeile oben rechts: «Offline · N» (ab 2.43), Antippen zeigt eine Erklärung. Im Eltern-Bereich oben ein Hinweis,
   // dass Daten vom anderen iPad möglicherweise nicht aktuell sind.
   var NETERR = 'Keine Verbindung zum Internet.';
   function offline(){ return linked() && (navigator.onLine === false || meta.err === NETERR); }
+  // APC 2.43: «Offline» oben rechts in der Kopfzeile, links neben «Mission Center» (bzw. «Vollbild»),
+  // kurz «Offline · N» (N = wartende Änderungen). Antippen zeigt eine Erklärung.
+  var pop = null;
   function badge(){
-    if (!document.body) return;
+    var t = document.querySelector('.topbar .toggles'); if (!t) return;
     var el = document.getElementById('sy-off');
-    if (!el){ el = document.createElement('span'); el.id = 'sy-off'; el.className = 'sy-off'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+    if (!el){ el = document.createElement('button'); el.type = 'button'; el.id = 'sy-off'; el.className = 'sy-off';
+      el.onclick = function(e){ e.stopPropagation(); if (pop) closePop(); else openPop(); }; }
+    if (t.firstChild !== el) t.insertBefore(el, t.firstChild);
     var n = Object.keys(meta.dirty).length, on = enabled && logged() && offline();
     el.hidden = !on;
-    el.textContent = on ? 'Offline' + (n ? ' · ' + n + (n > 1 ? ' Änderungen warten' : ' Änderung wartet') : '') : '';
+    el.textContent = on ? 'Offline' + (n ? ' · ' + n : '') : '';
+    el.setAttribute('aria-label', on ? 'Offline' + (n ? ', ' + n + (n > 1 ? ' Änderungen warten' : ' Änderung wartet') : '') + '. Erklärung anzeigen' : '');
+    el.setAttribute('aria-expanded', pop ? 'true' : 'false');
+    document.documentElement.classList.toggle('sy-offl', on);
+    if (!on) closePop(); else if (pop) fillPop();
     banner();
   }
+  function whenRel(iso){
+    if (!iso) return 'noch nie';
+    var d = new Date(iso), now = new Date(), p2 = function(x){ return (x < 10 ? '0' : '') + x; };
+    var hm = p2(d.getHours()) + ':' + p2(d.getMinutes());
+    if (d.toDateString() === now.toDateString()) return 'heute, ' + hm;
+    var y = new Date(now); y.setDate(now.getDate() - 1);
+    if (d.toDateString() === y.toDateString()) return 'gestern, ' + hm;
+    return p2(d.getDate()) + '.' + p2(d.getMonth() + 1) + '.' + d.getFullYear() + ', ' + hm;
+  }
+  function fillPop(){
+    if (!pop) return;
+    var n = Object.keys(meta.dirty).length;
+    pop.innerHTML = '<h3 id="sy-pop-h">Offline</h3>' +
+      '<p>Dieses iPad hat gerade keine Internetverbindung. Alles wird normal auf dem iPad gespeichert.</p>' +
+      (n ? '<p><b>' + n + (n > 1 ? ' Änderungen warten' : ' Änderung wartet') + '</b> und ' + (n > 1 ? 'werden' : 'wird') + ' automatisch hochgeladen, sobald wieder Internet da ist.</p>'
+         : '<p>Es warten keine Änderungen auf das Hochladen.</p>') +
+      '<p>Änderungen vom anderen iPad erscheinen erst danach.</p>' +
+      '<small>Letzter Abgleich: ' + whenRel(meta.lastSync || meta.lastPush) + '</small>' +
+      '<button type="button" id="sy-pop-ok">OK</button>';
+    pop.querySelector('#sy-pop-ok').onclick = closePop;
+    place();
+  }
+  function place(){
+    var el = document.getElementById('sy-off'); if (!pop || !el) return;
+    var r = el.getBoundingClientRect(), w = pop.offsetWidth;
+    var left = Math.max(16, Math.min(innerWidth - w - 16, r.left + r.width / 2 - w / 2));
+    pop.style.top = (r.bottom + 12) + 'px'; pop.style.left = left + 'px';
+    pop.style.setProperty('--arrow', Math.max(18, Math.min(w - 32, r.left + r.width / 2 - left - 7)) + 'px');
+  }
+  function openPop(){
+    pop = document.createElement('div'); pop.className = 'sy-pop'; pop.setAttribute('role', 'dialog'); pop.setAttribute('aria-labelledby', 'sy-pop-h');
+    document.body.appendChild(pop); fillPop(); badge();
+    setTimeout(function(){ var ok = document.getElementById('sy-pop-ok'); if (ok) ok.focus(); }, 0);
+    document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', esc, true);
+    window.addEventListener('resize', place);
+  }
+  function closePop(){
+    if (!pop) return;
+    pop.remove(); pop = null;
+    document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', esc, true);
+    window.removeEventListener('resize', place);
+    var el = document.getElementById('sy-off'); if (el) el.setAttribute('aria-expanded', 'false');
+  }
+  function outside(e){ var el = document.getElementById('sy-off'); if (pop && !pop.contains(e.target) && !(el && el.contains(e.target))) closePop(); }
+  function esc(e){ if (e.key === 'Escape') closePop(); }
   function banner(){
     var sc = document.getElementById('screen-parents'); if (!sc) return;
     var el = document.getElementById('sy-banner');
@@ -554,8 +608,15 @@
     '.pbox .sync-form label{display:flex;flex-direction:column;align-items:stretch;gap:4px;color:var(--muted);font-size:.9rem;cursor:default}' +
     '.pbox .sync-form input{width:100%;height:auto;min-height:46px;box-sizing:border-box;border-radius:10px;border:1.5px solid var(--line);background:var(--panel-2);color:var(--text);font:inherit;font-size:16px;padding:8px 12px;accent-color:auto}' +
     '.pbox .sync-err{color:var(--red)}' +
-    '.sy-off{position:fixed;z-index:55;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 72px);pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.35);background:rgba(40,28,6,.92)!important;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;border:1px solid rgba(245,158,11,.55);background:rgba(245,158,11,.14);color:#FBBF24;font:700 .72rem/1.2 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}' +
-    '.sy-off[hidden]{display:none}.sy-off::before{content:"";width:7px;height:7px;border-radius:50%;background:#F59E0B}' +
+    '.sy-off{display:inline-flex;align-items:center;gap:8px;align-self:center;padding:8px 14px;border-radius:999px;border:1px solid rgba(245,158,11,.6);background:rgba(245,158,11,.16);color:#FBBF24;font:800 .95rem/1.2 system-ui,-apple-system,sans-serif;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap;cursor:pointer;margin-right:2px}' +
+    '.sy-off[hidden]{display:none}.sy-off::before{content:"";width:9px;height:9px;border-radius:50%;background:#F59E0B}' +
+    'html.sy-offl .topbar .brand > span{display:none}' +
+    '.sy-pop{position:fixed;z-index:70;width:min(360px,calc(100vw - 32px));background:#101A2E;color:#E8EEFC;border:1px solid rgba(245,158,11,.55);border-radius:16px;padding:16px 18px;box-shadow:0 18px 40px rgba(0,0,0,.5);font:400 .98rem/1.45 system-ui,-apple-system,sans-serif}' +
+    '.sy-pop h3{margin:0 0 8px;font:800 1.05rem/1.2 system-ui,-apple-system,sans-serif;color:#FBBF24;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.04em}' +
+    '.sy-pop h3::before{content:"";width:9px;height:9px;border-radius:50%;background:#F59E0B}' +
+    '.sy-pop p{margin:0 0 8px}.sy-pop small{display:block;color:#9FB0D0;margin-top:4px}' +
+    '.sy-pop button{margin-top:12px;width:100%;min-height:44px;border-radius:12px;border:0;background:#2A3A60;color:#fff;font:700 .95rem system-ui,-apple-system,sans-serif;cursor:pointer}' +
+    '.sy-pop::before{content:"";position:absolute;top:-8px;left:var(--arrow,40px);width:14px;height:14px;background:#101A2E;border-left:1px solid rgba(245,158,11,.55);border-top:1px solid rgba(245,158,11,.55);transform:rotate(45deg)}' +
     '.sy-banner{margin:0 0 14px;padding:12px 14px;border-radius:14px;font-size:.95rem;line-height:1.4;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}' +
     '.sy-banner.off{border:1px solid rgba(245,158,11,.5);background:rgba(245,158,11,.12);color:var(--text)}' +
     '.sy-banner.new{border:1px solid rgba(127,212,255,.5);background:rgba(127,212,255,.12);color:var(--text)}' +
