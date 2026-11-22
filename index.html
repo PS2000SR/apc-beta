@@ -1493,9 +1493,12 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.3';
+const APP_VERSION = '2.31';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.31', date:'22.11.2026',
+    neu:[],
+    fix:['Eigene Bilder der Spielerkarte werden nicht mehr in die Cloud hochgeladen, sie bleiben nur auf dem Gerät (wie vorgesehen). Bilder, die bisher versehentlich hochgeladen wurden, löscht die App beim nächsten Abgleich einmalig aus der Cloud. Die Bilder auf dem Gerät bleiben erhalten.'] },
   { v:'2.3', date:'21.11.2026',
     neu:['Neu heisst der Bereich «Camps, Spezialtrainings und Turniere». Als dritte Art lassen sich Turniere ausserhalb des Clubs erfassen: Name, Ort, Veranstalter, Team, Von/Bis, Startgeld, Übernachtung und Reisekosten.',
          'Turnierstatistik: Ab dem ersten Turniertag auf der Karte Spiele, Tore, Assists, Strafen und Platzierung erfassen. Die Werte erscheinen in der Saison unter Fortschritt → Matches und im Bericht. Tore geben +20 XP, Assists +15 XP (höchstens 100 XP pro Spiel).',

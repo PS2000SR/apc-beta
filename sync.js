@@ -17,7 +17,8 @@
   if (!LS) return;
   var SP = Storage.prototype, rawGet = SP.getItem, rawSet = SP.setItem, rawRem = SP.removeItem;
   var META = 'apc.sync.v1';
-  var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg.', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.'];   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
+  // apc.cardimg deckt die Auswahl (apc.cardimg.v1) UND die eigenen Bilder (apc.cardimgs.v1) ab – bis APC 2.3 fehlten die Bilder (Tippfehler)
+  var SKIP = ['apc.sync.', 'apc.seenVersion', 'apc.cardimg', 'apc.clips.', 'apc.name', 'apc.theme', 'apc.xseen.'];   // apc.xseen: gesehene Bonus-Meldungen pro Gerät
   var MERGE = { 'apc.progress.v1':mergeProgress, 'apc.komm.v1':mergeKomm, 'apc.games.v1':mergeKomm };   // Kommentare und Matchstatistik: pro Eintrag der neuere Stand
   var syncable = function(k){ k = String(k); return k.indexOf('apc.') === 0 && !SKIP.some(function(p){ return k.indexOf(p) === 0; }); };
   var enabled = !!(CFG.url && CFG.key);
@@ -25,6 +26,7 @@
   function loadMeta(){ try { return JSON.parse(rawGet.call(LS, META) || '{}') || {}; } catch(e){ return {}; } }
   var meta = loadMeta();
   meta.dirty = meta.dirty || {};
+  Object.keys(meta.dirty).forEach(function(k){ if (!syncable(k)) delete meta.dirty[k]; });   // APC 2.31: z. B. eigene Bilder nie mehr hochladen
   if (meta.linked === true && !meta.status) meta.status = 'aktiv';   // Geräte, die schon vor 1.9 verbunden waren (auch offline sofort nutzbar)
   if (!meta.device) meta.device = Math.random().toString(36).slice(2, 10);
   function saveMeta(){ try { rawSet.call(LS, META, JSON.stringify(meta)); } catch(e){} }
@@ -88,7 +90,7 @@
   function localKeys(){ var out = []; for (var i = 0; i < LS.length; i++){ var k = LS.key(i); if (k && syncable(k)) out.push(k); } return out; }
   function push(opt){
     if (!linked()) return Promise.resolve(0);
-    var D = meta.dirty, keys = Object.keys(D); if (!keys.length) return Promise.resolve(0);
+    var D = meta.dirty, keys = Object.keys(D).filter(syncable); if (!keys.length) return Promise.resolve(0);
     var snap = {}; keys.forEach(function(k){ snap[k] = D[k].t; });
     var ups = keys.filter(function(k){ return !D[k].del; }).map(function(k){ var v = rawGet.call(LS, k); return v === null ? null : { key:k, value:v, device:meta.device }; }).filter(Boolean);
     var dels = keys.filter(function(k){ return D[k].del || rawGet.call(LS, k) === null; });
@@ -121,6 +123,13 @@
       return changed;
     }, function(e){ meta.err = e.message; saveMeta(); paint(); throw e; });
   }
+  // APC 2.31: eigene Bilder, die bis APC 2.3 versehentlich hochgeladen wurden, einmalig aus der Cloud löschen.
+  // Nur die Cloud-Kopie; die Bilder auf dem Gerät bleiben.
+  function cleanCloud(){
+    if (meta.imgClean === 1) return Promise.resolve();
+    return api('/rest/v1/kv?key=eq.' + encodeURIComponent('apc.cardimgs.v1'), { method:'DELETE', headers:{ Prefer:'return=minimal' } })
+      .then(function(){ meta.imgClean = 1; saveMeta(); }, function(){});   // offline: beim nächsten Abgleich wieder versuchen
+  }
   var needReload = false, busy = false;
   function cycle(){
     if (!enabled || !logged() || busy) return Promise.resolve();
@@ -131,7 +140,7 @@
       if (meta.linked !== true) return meta.choice ? null : firstLink();
       // Auf Seiten mit laufender Mission oder offenen Formularen nur hochladen, nicht holen
       var safe = window.APC_screen === undefined || SAFE.indexOf(window.APC_screen) >= 0;
-      return (safe ? pull() : Promise.resolve()).then(function(){ return push(); });
+      return cleanCloud().then(function(){ return safe ? pull() : null; }).then(function(){ return push(); });
     }).catch(function(e){ meta.err = e.message; saveMeta(); }).then(function(){ busy = false; paint(); gate(); maybeReload(); });
   }
   // Die App hält ihre Daten im Arbeitsspeicher. Neue Daten vom anderen Gerät werden darum mit einem
