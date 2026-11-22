@@ -1388,22 +1388,18 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
 }
 /* APC 2.5: Vorbereitungsphase mit Countdown */
 .ph-snow{--phc:var(--ice)}.ph-cup{--phc:var(--gold)}.ph-flag{--phc:var(--red)}.ph-bolt{--phc:var(--ok)}
-.ph-ban{margin:0 0 16px;border:1px solid var(--phc);border-left-width:5px;border-radius:14px;background:linear-gradient(90deg,color-mix(in srgb,var(--phc) 16%,var(--panel)),var(--panel));box-shadow:var(--e1)}
-.ph-ban summary{list-style:none;display:flex;align-items:center;gap:14px;padding:12px 16px;cursor:pointer}
-.ph-ban summary::-webkit-details-marker{display:none}
-.ph-ico{font-size:2rem;line-height:1}
-.ph-txt{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
-.ph-txt small{color:var(--phc);font-weight:800;text-transform:uppercase;letter-spacing:.08em;font-size:.72rem}
-.ph-txt b{font-family:var(--f-display);font-size:1.3rem;line-height:1.15;color:var(--text)}
-.ph-bar{display:block;height:6px;border-radius:3px;background:var(--line);overflow:hidden;margin-top:4px;max-width:420px}
-.ph-bar i{display:block;height:100%;background:var(--phc);border-radius:3px}
-.ph-sub{color:var(--muted);font-size:.85rem}
-.ph-cd{display:flex;flex-direction:column;align-items:center;min-width:64px;padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--phc) 22%,transparent)}
+.ph-box{border:1px solid var(--phc);border-left-width:6px;border-radius:20px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;text-align:left;background:linear-gradient(135deg,color-mix(in srgb,var(--phc) 16%,var(--panel)),var(--panel) 80%);box-shadow:var(--e1)}
+.ph-top{display:flex;align-items:center;gap:10px}
+.ph-ico{font-size:1.5rem;line-height:1}
+.ph-lbl{flex:1;color:var(--phc);font-weight:800;text-transform:uppercase;letter-spacing:.1em;font-size:.72rem}
+.ph-cd{display:flex;align-items:baseline;gap:4px}
 .ph-cd b{font-family:var(--f-display);font-size:2.1rem;line-height:1;color:var(--phc)}
-.ph-cd small{color:var(--muted);font-size:.75rem;font-weight:700}
-.ph-det{display:flex;flex-direction:column;gap:2px;padding:0 16px 12px 62px;color:var(--muted)}
-.ph-det b{color:var(--text)}
-.ph-motto{font-style:italic;color:var(--text)}
+.ph-cd small{color:var(--muted);font-size:.78rem;font-weight:700}
+.ph-name{font-family:var(--f-display);font-size:1.4rem;line-height:1.1;color:var(--text)}
+.ph-motto{margin:0;font-size:1.08rem;font-weight:600;font-style:italic;line-height:1.25;color:var(--text)}
+.ph-bar{display:block;height:7px;border-radius:4px;background:var(--line);overflow:hidden;margin-top:4px}
+.ph-bar i{display:block;height:100%;background:var(--phc);border-radius:4px}
+.ph-sub{color:var(--muted);font-size:.8rem;font-weight:600}
 .ph-now{border-width:2px;border-left-width:6px}
 .pday.ph{background:color-mix(in srgb,var(--phc) 12%,var(--panel));border-left:4px solid var(--phc)}
 .pday.ph-goal{box-shadow:inset 0 0 0 2px var(--phc)}
@@ -1525,9 +1521,13 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.5';
+const APP_VERSION = '2.51';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.51', date:'22.11.2026',
+    neu:['Vorbereitungsphase: Der Kasten steht jetzt im Mission Center oben in der rechten Spalte, über dem Wochenziel. So bleibt der Wochenplan auf dem iPad ohne Scrollen sichtbar.',
+         'Das Motto ist immer gut lesbar unter dem Namen. Countdown oben rechts im Kasten, darunter Fortschrittsbalken mit «Tag … von …», Turnierdaten und Ort.'],
+    fix:[] },
   { v:'2.5', date:'22.11.2026',
     neu:['Vorbereitungsphase mit Countdown: Im Eltern-Bereich unter «Vorbereitungsphase» lässt sich ein Turnier oder Camp aus «Camps, Spezialtrainings und Turniere» als Ziel wählen (z. B. die Winter Challenge), dazu Start der Vorbereitung, Symbol und Motto.',
          'Im Mission Center zeigt ein Banner «Noch … Tage» mit Fortschrittsbalken und «Tag … von … der Vorbereitung». Antippen zeigt Datum, Ort und Motto. Am Tag selbst steht «Heute: … – viel Erfolg!», danach verschwindet die Anzeige.',
@@ -4014,15 +4014,17 @@ const phaseMarks = player => { const b = phaseBase(); return b && ymd(new Date()
 const phaseChip = (dt, p) => p && dt && ymd(dt) === p.date && !p.camp ? `<span class="pc phase ph-${p.icon}">${p.sym} ${rpEsc(p.name)}</span>` : '';
 const inPhase = (dt, p) => { if (!p || !dt) return ''; const k = ymd(dt); return k === p.date ? ` ph ph-goal ph-${p.icon}` : k >= p.start && k < p.date ? ` ph ph-${p.icon}` : ''; };
 const phaseCD = p => p.left === 0 ? `Heute: ${rpEsc(p.name)} – viel Erfolg!` : p.left === 1 ? `Morgen ist ${rpEsc(p.name)}!` : `Noch ${p.left} Tage bis ${rpEsc(p.name)}`;
-function phaseBannerHTML(){
+function phaseBannerHTML(){   // APC 2.51: Kasten oben in der rechten Spalte (Variante B), Motto immer sichtbar
   const p = phaseShown(); if (!p) return '';
-  const c = p.camp, det = [c ? `${CAMP_KIND[c.kind]}: ${campDate(c)}` : fmtDM(ymdDate(p.date), true), c && c.place ? rpEsc(c.place) : '', c && c.team ? 'Team ' + rpEsc(c.team) : ''].filter(Boolean).join(' · ');
-  return `<details class="ph-ban ph-${p.icon}${p.left === 0 ? ' ph-now' : ''}"><summary>
-      <span class="ph-ico" aria-hidden="true">${p.sym}</span>
-      <span class="ph-txt"><small>${p.left === 0 ? 'Es ist so weit' : 'In Vorbereitung'}</small><b>${phaseCD(p)}</b>
-        ${p.left > 0 ? `<span class="ph-bar" role="img" aria-label="Tag ${p.dayN} von ${p.total} der Vorbereitung"><i style="width:${Math.max(3, Math.round(p.frac * 100))}%"></i></span><span class="ph-sub">Tag ${p.dayN} von ${p.total} der Vorbereitung</span>` : ''}</span>
-      ${p.left > 0 ? `<span class="ph-cd"><b>${p.left}</b><small>${p.left === 1 ? 'Tag' : 'Tage'}</small></span>` : ''}</summary>
-    <div class="ph-det"><b>${rpEsc(p.name)}</b><span>${det}</span>${p.motto ? `<span class="ph-motto">«${rpEsc(p.motto)}»</span>` : ''}</div></details>`;
+  const c = p.camp, when = c ? `${fmtDM(ymdDate(c.from))}${c.to && c.to !== c.from ? '–' + fmtDM(ymdDate(c.to)) : ''}` : fmtDM(ymdDate(p.date));
+  const det = [p.left > 0 ? `Tag ${p.dayN} von ${p.total}` : '', when, c && c.place ? rpEsc(c.place) : '', c && c.team ? 'Team ' + rpEsc(c.team) : ''].filter(Boolean).join(' · ');
+  return `<section class="ph-box ph-${p.icon}${p.left === 0 ? ' ph-now' : ''}" aria-label="Vorbereitungsphase">
+    <div class="ph-top"><span class="ph-ico" aria-hidden="true">${p.sym}</span><span class="ph-lbl">${p.left === 0 ? 'Heute ist es so weit' : p.left === 1 ? 'Morgen geht es los' : 'In Vorbereitung'}</span>
+      ${p.left > 0 ? `<span class="ph-cd"><b>${p.left}</b><small>${p.left === 1 ? 'Tag' : 'Tage'}</small></span>` : ''}</div>
+    <b class="ph-name">${p.left === 0 ? `Heute: ${rpEsc(p.name)} – viel Erfolg!` : rpEsc(p.name)}</b>
+    ${p.motto ? `<p class="ph-motto">«${rpEsc(p.motto)}»</p>` : ''}
+    ${p.left > 0 ? `<span class="ph-bar" role="img" aria-label="Tag ${p.dayN} von ${p.total} der Vorbereitung"><i style="width:${Math.max(3, Math.round(p.frac * 100))}%"></i></span>` : ''}
+    <span class="ph-sub">${det}</span></section>`;
 }
 const phaseCardBadge = () => { const p = phaseShown(); return p ? `<p class="pc-phase ph-${p.icon}"><span aria-hidden="true">${p.sym}</span> ${p.left === 0 ? 'Heute' : 'In Vorbereitung'}: <b>${rpEsc(p.name)}</b>${p.left > 0 ? ` · noch ${p.left} ${p.left === 1 ? 'Tag' : 'Tage'}` : ''}</p>` : ''; };
 /* Bericht: eine Zeile im Kurzfazit, wenn die Phase in den Zeitraum fällt */
@@ -5374,10 +5376,10 @@ function renderCenter(){
   const C = 2 * Math.PI * 40, frac = Math.min(1, wc / tgt);
   $('screen-center').innerHTML = `
   <div class="inner">
-    ${phaseBannerHTML()}
     <div class="mc2">
       <section class="mc2-main">${mainHTML}</section>
       <aside class="mc2-side">
+        ${phaseBannerHTML()}
         <div class="mc2-box"><p class="eyebrow">Dein Wochenziel</p>
           <div class="mc2-goal">
             <svg viewBox="0 0 100 100" role="img" aria-label="${wc} von ${tgt} Trainings diese Woche"><circle cx="50" cy="50" r="40" fill="none" stroke="var(--line)" stroke-width="9"/>
