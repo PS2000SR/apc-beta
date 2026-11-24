@@ -1521,9 +1521,13 @@ html.theme-anim *,html.theme-anim *::before,html.theme-anim *::after{transition:
    ===================================================================== */
 /* Versionsnummer (Regeln: kleine Anpassung 1.71, grössere Änderung 1.8, grundlegender Umbau 2.0).
    Gleicher Code in Beta und richtiger App; der Zusatz «Beta» kommt aus der Adresse. */
-const APP_VERSION = '2.51';
+const APP_VERSION = '2.52';
 /* «Was ist neu»: neueste Version zuoberst. Bei jeder Version ergänzen (neu = Neuerungen, fix = Fehlerbehebungen). */
 const CHANGELOG = [
+  { v:'2.52', date:'24.11.2026',
+    neu:['Vorbereitungsphase: Wird das verknüpfte Turnier oder Camp gelöscht, zeigt der Eltern-Bereich jetzt einen Hinweis, statt die Vorbereitung ohne Erklärung verschwinden zu lassen.'],
+    fix:['Ein falscher Wert in den Daten der Vorbereitungsphase (z. B. aus einer veränderten Sicherung) verhindert den Start der App nicht mehr.',
+         'Aufgeräumt: nicht verwendete Testdateien aus der Beta entfernt.'] },
   { v:'2.51', date:'22.11.2026',
     neu:['Vorbereitungsphase: Der Kasten steht jetzt im Mission Center oben in der rechten Spalte, über dem Wochenziel. So bleibt der Wochenplan auf dem iPad ohne Scrollen sichtbar.',
          'Das Motto ist immer gut lesbar unter dem Namen. Countdown oben rechts im Kasten, darunter Fortschrittsbalken mit «Tag … von …», Turnierdaten und Ort.'],
@@ -3995,12 +3999,14 @@ const phaseDiff = (a, b) => Math.round((ymdDate(b) - ymdDate(a)) / 864e5);   // 
 function phaseBase(){
   const p = phaseStore; if (!p || !p.on) return null;
   const camp = p.campId ? camps.find(c => c.id === p.campId) : null;
-  const date = camp ? camp.from : p.date, name = (p.name || (camp && camp.name) || '').trim() || 'Vorbereitung';
+  const date = camp ? camp.from : p.date, name = String(p.name || (camp && camp.name) || '').trim() || 'Vorbereitung';   // APC 2.52: String – ein falscher Wert verhindert den Start nicht
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
   let start = /^\d{4}-\d{2}-\d{2}$/.test(p.start || '') ? p.start : date; if (start > date) start = date;
   const icon = PHASE_ICONS[p.icon] ? p.icon : 'snow';
-  return { name, date, start, camp, icon, sym:PHASE_ICONS[icon][0], motto:p.motto || '', visible:p.visible !== false };
+  return { name, date, start, camp, icon, sym:PHASE_ICONS[icon][0], motto:String(p.motto || ''), visible:p.visible !== false };
 }
+/* APC 2.52: Phase ist eingeschaltet, aber der verknüpfte Eintrag wurde gelöscht */
+const phaseOrphan = () => { const p = phaseStore; return !!(p && p.on && p.campId && !camps.some(c => c.id === p.campId)); };
 /* Stand heute: null vor dem Start und nach dem Ziel-Tag */
 function phaseInfo(){
   const b = phaseBase(); if (!b) return null;
@@ -4069,8 +4075,9 @@ function phaseParentsHTML(){
     body = `<p><b>${b.sym} ${rpEsc(b.name)}</b> · ${fmtDM(ymdDate(b.date), true)}${b.camp ? '' : ' (eigener Anlass)'}<br>${st}${b.visible ? '' : ' Für den Spieler ausgeblendet.'}${b.motto ? `<br>Motto: «${rpEsc(b.motto)}»` : ''}</p>
       <div class="bk-row"><button class="btn btn-primary btn-small" id="ph-edit">Ändern</button><button class="btn btn-ghost btn-small" id="ph-end">Phase beenden</button></div>`;
   } else {
-    body = `<p>${b ? `«${rpEsc(b.name)}» ist vorbei. ` : ''}Markiert eine Vorbereitung auf ein Turnier oder Camp: Countdown im Mission Center, farbige Tage im Wochenplan und ein Abzeichen auf der Spielerkarte. Der Countdown läuft bis zum Tag des Anlasses und verschwindet danach.</p>
-      <div class="bk-row"><button class="btn btn-primary btn-small" id="ph-edit">${b ? 'Neue Vorbereitung' : 'Vorbereitung einrichten'}</button></div>`;
+    const orph = phaseOrphan();
+    body = `${orph ? '<p style="color:var(--red);font-weight:600">Der verknüpfte Eintrag unter «Camps, Spezialtrainings und Turniere» wurde gelöscht. Die Vorbereitung ist darum nicht mehr aktiv – bitte neu einrichten.</p>' : ''}<p>${b ? `«${rpEsc(b.name)}» ist vorbei. ` : ''}Markiert eine Vorbereitung auf ein Turnier oder Camp: Countdown im Mission Center, farbige Tage im Wochenplan und ein Abzeichen auf der Spielerkarte. Der Countdown läuft bis zum Tag des Anlasses und verschwindet danach.</p>
+      <div class="bk-row"><button class="btn btn-primary btn-small" id="ph-edit">${b || orph ? 'Neue Vorbereitung' : 'Vorbereitung einrichten'}</button></div>`;
   }
   return `<div class="parents"><div class="pbox backup" id="box-phase"><p class="eyebrow">Vorbereitungsphase</p>${body}</div></div>`;
 }

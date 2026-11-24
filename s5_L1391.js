@@ -1,1 +1,0 @@
-try{if(localStorage.getItem('apc.theme')==='light')document.documentElement.dataset.theme='light';}catch(e){}
